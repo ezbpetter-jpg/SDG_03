@@ -378,7 +378,10 @@ npm run build
 * **Venue**: Minhaj University Lahore
 * **Date**: Tuesday, 17 November 2026 (Live Freeze at 3:55 PM)
 * **Official Repository**: [https://github.com/muhammadali382/SDG_03](https://github.com/muhammadali382/SDG_03)
+* **Live Deployment Target**: [https://tabeeb-care.vercel.app](https://tabeeb-care.vercel.app)
 * **Required Collaborators Invited**:
   * `@httpsharis` (https://github.com/httpsharis)
   * `@anamta-JINX` (https://github.com/anamta-JINX)
-* **Active Working Branch**: `dev`
+* **Active Branches**:
+  * `main`: Protected production release branch
+  * `dev`: Primary development branch
