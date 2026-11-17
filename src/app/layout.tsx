@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { UserProvider } from "@/context/UserContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
+import { InitialSplashLoader } from "@/components/layout/InitialSplashLoader";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,6 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900 overflow-x-hidden">
+        <InitialSplashLoader />
         <UserProvider>
           <Navbar />
           <main className="flex-1 max-w-[1600px] w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
