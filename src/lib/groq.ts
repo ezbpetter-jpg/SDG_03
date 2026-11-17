@@ -1,8 +1,9 @@
 import Groq from "groq-sdk";
 
-export const GROQ_MODEL = "llama-3.1-8b-instant";
+export const GROQ_MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-20b";
 
-const apiKey = process.env.GROQ_API_KEY || "";
+const rawKey = process.env.GROQ_API_KEY || "";
+const apiKey = rawKey.replace(/^["']|["']$/g, "").trim();
 
 export const groq = new Groq({
   apiKey,
