@@ -1,387 +1,584 @@
 # TabeebCare (طبیب کیئر) — AI for Accessible Healthcare & Well-Being
 
+[![Live Deployment](https://img.shields.io/badge/Live%20Deployment-tabeeb--care.vercel.app-009688.svg?style=for-the-badge&logo=vercel)](https://tabeeb-care.vercel.app)
 [![UN SDG 3: Good Health & Well-Being](https://img.shields.io/badge/UN%20SDG-03%20Good%20Health%20%26%20Well--Being-009688.svg?style=for-the-badge&logo=un)](https://sdgs.un.org/goals/goal3)
-[![Next.js 15](https://img.shields.io/badge/Next.js-15%20App%20Router-black.svg?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-[![Groq Cloud](https://img.shields.io/badge/Groq%20Cloud-llama--3.1--8b--instant-f55036.svg?style=for-the-badge)](https://groq.com/)
-[![SQLite](https://img.shields.io/badge/SQLite-node%3Asqlite-003B57.svg?style=for-the-badge&logo=sqlite)](https://sqlite.org/)
+[![Next.js 14/15](https://img.shields.io/badge/Next.js-14%2F15%20App%20Router-black.svg?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Groq Cloud LPU](https://img.shields.io/badge/Groq%20Cloud-llama--3.1--8b--instant-f55036.svg?style=for-the-badge)](https://groq.com/)
+[![SQLite Native](https://img.shields.io/badge/Database-node%3Asqlite-003B57.svg?style=for-the-badge&logo=sqlite)](https://sqlite.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-Light%20Theme-38bdf8.svg?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 
-> **Minhaj University Lahore • Seekers Tech & Computing Society (STCS)**  
-> **Student Week 2026 • AI Hackathon & Startup Pitch**  
-> Challenge Niche: **AI for Accessible Healthcare & Well-Being (United Nations SDG 3)**  
-> Live Code Freeze: **3:55 PM, Tuesday, 17 November 2026**
+> **Seekers Tech & Computing Society (STCS) • Student Week 2026**  
+> **Minhaj University Lahore • AI Hackathon & Startup Pitch**  
+> Challenge Track: **United Nations SDG 3 — Good Health and Well-Being**  
+> Official Repository: [https://github.com/muhammadali382/SDG_03](https://github.com/muhammadali382/SDG_03)  
+> Live Deployment: [https://tabeeb-care.vercel.app](https://tabeeb-care.vercel.app)
 
 ---
 
 ## 📑 Table of Contents
-1. [Executive Summary & Problem Statement (SDG 3)](#-1-executive-summary--problem-statement-sdg-3)
-2. [Complete & Exhaustive Feature Matrix](#-2-complete--exhaustive-feature-matrix)
-3. [AI Integration & Technical Architecture](#-3-ai-integration--technical-architecture)
-4. [Startup Pitch & Business Model (25% Weight)](#-4-startup-pitch--business-model-25-weight)
-5. [Clinical RAG Knowledge Base (15 Protocols)](#-5-clinical-rag-knowledge-base-15-protocols)
-6. [UI/UX Design System & Accessibility](#-6-uiux-design-system--accessibility)
-7. [Safety, Ethical Guardrails & Compliance](#-7-safety-ethical-guardrails--compliance)
-8. [60-Second Live Demo Script for Judges](#-8-60-second-live-demo-script-for-judges)
-9. [Local Setup & Verification Guide](#-9-local-setup--verification-guide)
-10. [Submission & Repository Information](#-10-submission--repository-information)
+1. [Project Overview](#-1-project-overview)
+2. [Problem Statement](#-2-problem-statement)
+3. [Key Features](#-3-key-features)
+4. [Technology Stack](#-4-technology-stack)
+5. [System Architecture](#-5-system-architecture)
+6. [Project Structure](#-6-project-structure)
+7. [Installation and Setup](#-7-installation-and-setup)
+8. [Environment Variables](#-8-environment-variables)
+9. [API Documentation](#-9-api-documentation)
+10. [AI Agent Architecture & Safety Guardrails](#-10-ai-agent-architecture--safety-guardrails)
+11. [Screenshots & 60-Second Demo Script](#-11-screenshots--60-second-demo-script)
+12. [Security and Medical Disclaimer](#-12-security-and-medical-disclaimer)
+13. [Current Limitations & Future Roadmap](#-13-current-limitations--future-roadmap)
+14. [Contributing](#-14-contributing)
+15. [License and Acknowledgements](#-15-license-and-acknowledgements)
 
 ---
 
-## 🏥 1. Executive Summary & Problem Statement (SDG 3)
+## 🏥 1. Project Overview
 
-In Pakistan and developing healthcare ecosystems across South Asia, accessible and safe healthcare is constrained by three structural bottlenecks:
+**TabeebCare (طبیب کیئر)** is an intelligent, culturally-attuned, bilingual healthcare literacy and triage navigation assistant developed for Pakistani patients and resource-constrained health systems. Built in alignment with **United Nations Sustainable Development Goal 3 (Good Health and Well-Being)**, the platform demystifies complex prescriptions into intuitive 24-hour visual timetables, stratifies acute symptoms into clinical urgency tiers using WHO-inspired clinical protocols, and creates one-click clinical handover summaries (SBAR) to bridge communication gaps between patients and physicians.
+
+### Why TabeebCare Was Developed
+In primary care settings across developing countries, low health literacy, language barriers, and extreme doctor-patient shortages lead to preventable medication errors and delayed emergency care. TabeebCare acts as a pre-consultation navigator and post-consultation educator, translating confusing medical terminology into actionable guidance in **English**, **Urdu (اردو)**, and **Roman Urdu**.
+
+### Intended Users
+- **Patients & Families**: Outpatients navigating multi-drug prescriptions, chronic conditions (e.g., Diabetes, Hypertension), or acute symptom flare-ups.
+- **Caregivers & Eldercare Providers**: Family members managing medication schedules and monitoring warning signs for elderly dependents.
+- **Primary Care Physicians**: Doctors receiving structured, concise SBAR handover notes from patients during brief 3-minute consultations.
+
+---
+
+## 🔍 2. Problem Statement
+
+TabeebCare directly tackles four systemic healthcare delivery challenges:
 
 1. **Prescription Misunderstanding & Medication Non-Adherence**:
-   * Over **65% of Pakistani outpatients** struggle to read handwritten prescriptions, comprehend English brand names, or understand dosage timing.
-   * This leads to missed antibiotic doses, dangerous drug clashes, accidental overdoses, and antibiotic resistance (AMR).
-2. **Delayed Emergency Triage & Triage Misdirection**:
-   * Patients cannot reliably distinguish between self-limiting symptoms (e.g., viral fatigue, common cold) and life-threatening red flags (e.g., atypical cardiac ischemia, ischemic stroke FAST indicators, pediatric dehydration, or high-fever sepsis).
-   * Overburdened tertiary emergency rooms are flooded with routine cases while critical emergencies arrive too late.
-3. **The 3-Minute Consultation Gap**:
-   * Due to an extreme doctor-to-patient deficit (approximately 1 doctor per 1,300 people), primary care outpatient consultations frequently last **under 3 minutes**.
-   * Rushed doctors lack time to capture comprehensive longitudinal medical histories, and patients struggle to clearly summarize symptom timelines.
-
-### The Solution: TabeebCare (طبیب کیئر)
-TabeebCare is an intelligent, bilingual, and culturally-attuned healthcare literacy and triage navigation assistant designed to democratize primary care navigation, demystify complex prescriptions into visual 24-hour schedules, and bridge communication between patients and physicians.
+   Patients frequently struggle to decipher handwritten prescriptions, distinguish between brand and generic compounds, or remember timing instructions. This leads to missed doses, inappropriate drug combinations, and treatment failures.
+2. **Medication Clashes & Allergy Risks**:
+   Patients often forget to disclose known allergies (e.g., Penicillin) or chronic conditions to prescribing doctors, resulting in dangerous cross-reactive dispensing (e.g., Co-amoxiclav prescribed to a penicillin-allergic patient).
+3. **Emergency Triage Uncertainty**:
+   Individuals often cannot differentiate between benign self-limiting illness and life-threatening red flags (such as atypical cardiac pain, stroke FAST indicators, or pediatric dehydration). This causes avoidable deaths from delayed care or unnecessary crowding of tertiary emergency rooms.
+4. **The 3-Minute Consultation Gap**:
+   Due to heavy patient loads, primary care outpatient visits often last under 3 minutes. Rushed consultations leave little time for doctors to capture longitudinal medical histories or for patients to clearly convey their symptoms.
 
 ---
 
-## ⚡ 2. Complete & Exhaustive Feature Matrix
-
-Below is the complete inventory of **all major, minor, backend, frontend, safety, and algorithmic features** implemented in the project:
+## ⚡ 3. Key Features
 
 ### 💊 Module 1: Medicine Demystifier & Prescription Literacy (`/meds`)
-* **Free-Text Prescription Ingestion**: Accepts comma-separated brand or generic medicine names (e.g., *"Augmentin 625mg, Panadol 500mg, Glucophage"*).
-* **24-Hour Visual Schedule Generator**: Dynamically categorizes each drug into an intuitive four-phase visual routine:
-  * 🌅 **Morning (صبح)**
-  * ☀️ **Afternoon (دوپہر)**
-  * 🌇 **Evening (شام)**
-  * 🌙 **Night (رات)**
-* **Bilingual Drug Explanations**: Generates clear, non-jargon explanations of each drug's purpose in both simple English and natural Urdu script (اردو).
-* **Generic Compound Identification**: Identifies the generic chemical compounds behind commercial brand names (e.g., *Augmentin* $\rightarrow$ *Co-amoxiclav / Amoxicillin + Clavulanic Acid*).
-* **Critical Food & Drink Precautions**: Specifies exact dietary interactions (e.g., *"Take strictly after meals to prevent gastric upset"*, *"Avoid taking with milk or dairy products"*).
-* **Automated Allergy Conflict Sentinel**: Cross-references every analyzed medication against the patient's recorded drug allergies in their profile (e.g., Penicillin, Sulfa) and fires bold red conflict warning alerts.
-* **Chronic Condition Contraindication Checking**: Evaluates if prescribed medicines conflict with pre-existing conditions like Hypertension or Type-2 Diabetes.
-* **One-Click Quick-Fill Demo Presets**:
-  * 1️⃣ *Diabetes Prescription*: `Metformin 500mg, Glibenclamide 5mg, Aspirin 75mg`
-  * 2️⃣ *Antibiotic Course (Allergy Conflict Test)*: `Augmentin 625mg, Panadol 500mg` (triggers Penicillin alert)
-  * 3️⃣ *Blood Pressure Routine*: `Amlodipine 5mg, Losartan 50mg, Hydrochlorothiazide 25mg`
-* **Loading Spinner & Error Resilience**: Interactive UI states providing clear feedback during AI generation.
-* **Persistent Medication Audit Logging**: Automatically writes completed medication checks and JSON schedules into the SQLite `medication_checks` table for authenticated users.
-
----
+- **Prescription Ingestion**: Accepts comma-separated brand or generic medicine names (e.g., `Augmentin 625mg, Panadol 500mg, Metformin 500mg`).
+- **Visual 24-Hour Dosing Schedule**: Categorizes daily dosing into an intuitive four-phase visual routine:
+  - 🌅 **Morning (صبح)**
+  - ☀️ **Afternoon (دوپہر)**
+  - 🌇 **Evening (شام)**
+  - 🌙 **Night (رات)**
+- **Bilingual Purpose & Food Guidance**: Explains what each drug is for and how to take it (e.g., *"Take with food or a glass of milk to reduce stomach upset"*) in both clear English and natural Urdu script (اردو).
+- **Automated Allergy Conflict Sentinel**: Cross-references every analyzed medication against the patient's recorded drug allergies (e.g., Penicillin, Sulfa) and fires prominent conflict alerts.
+- **Pre-Configured Clinical Demo Presets**:
+  - *Diabetes Routine*: `Metformin 500mg, Glibenclamide 5mg, Aspirin 75mg`
+  - *Antibiotic Course (Allergy Conflict Test)*: `Augmentin 625mg, Panadol 500mg` (triggers Penicillin alert)
+  - *Hypertension Regimen*: `Amlodipine 5mg, Losartan 50mg, Hydrochlorothiazide 25mg`
 
 ### 🩺 Module 2: Multilingual Clinical Symptom Triage (`/triage`)
-* **Multilingual Natural Language Intake**: Users can describe symptoms freely in **Urdu script (اردو)**, **Roman Urdu** (*"Mujhe 2 din se tez bukhar hai"*), or **English**.
-* **Zero-Latency First-Token Streaming**: Server-Sent Events (SSE) readable stream powered by Groq LPU inference, delivering instant real-time response generation.
-* **4-Tier Urgency Stratification Engine**: Classifies patient conditions into exact clinical categories:
-  * 🚨 **Emergency (Levels 1–2)**: Immediate life hazard requiring emergency transfer.
-  * ⚠️ **Urgent Care (Level 3)**: High-priority symptoms requiring same-day clinic consultation.
-  * ℹ️ **Routine Care (Level 4)**: Non-critical symptoms suitable for an outpatient clinic visit in 2–3 days.
-  * 🟢 **Home Care (Level 5)**: Self-limiting minor illness managed with rest, hydration, and monitoring.
-* **Automated `TRIAGE_LEVEL` Header Extraction**: Stream parser captures line-1 urgency tags dynamically and updates the UI state in real-time.
-* **Four Clinical Scenario Starter Chips**:
-  * 🚨 *Cardiac Emergency*: "Crushing Chest Pain & Shortness of Breath"
-  * ⚠️ *Urgent Infection*: "Tez Bukhar aur Thand (2 din se)"
-  * ⚠️ *Pediatric Emergency*: "Mere bacha ko ulti aur dast ho rahe hain"
-  * 💚 *Crisis Intervention*: "Severe Emotional Crisis Support"
-* **In-Memory Keyword-Scored RAG Retriever**: Scans 15 clinical primary care protocol chunks with weighted multi-word scoring to ground every consultation in evidence.
-* **Dynamic Context Injection Pipeline**: Automatically injects patient medical profile (chronic diseases, allergies, active prescriptions) and RAG protocols into system prompts.
-* **Cultural Clinical Guidance**: Tailored to Pakistani endemic conditions (e.g., warning against NSAIDs/Aspirin when Dengue fever is suspected).
-* **Conversation Reset & State Refresh**: One-click button to clear current chat history and restart triage consultations.
-* **Auto-Scrolling Chat Window**: Maintains view focus at the bottom of the conversation as streaming tokens arrive.
-* **Session Persistence Engine**: Stores full multi-turn transcripts, triage levels, and summaries into the SQLite `triage_sessions` table.
+- **Multilingual Conversational Intake**: Accepts natural symptom descriptions in **Urdu (اردو)**, **Roman Urdu** (*"Mujhe 2 din se tez bukhar hai"*), or **English**.
+- **Server-Sent Events (SSE) Streaming**: Low-latency token generation via Groq Cloud LPU inference (`openai/gpt-oss-20b` / `llama-3.1-8b-instant`).
+- **4-Tier Urgency Stratification**:
+  - 🚨 **Emergency**: Immediate life hazard requiring 1122 transfer (e.g., chest pain, stroke symptoms).
+  - ⚠️ **Urgent**: High-priority symptoms requiring same-day clinic consultation.
+  - ℹ️ **Routine**: Non-critical symptoms suitable for an outpatient clinic visit within 2–3 days.
+  - 🟢 **Home Care**: Self-limiting minor illness managed with rest, hydration, and monitoring.
+- **WHO-Inspired Clinical Protocol RAG**: Grounds assessments in 15 evidence-based primary care guidelines using weighted keyword retrieval.
+- **RAG Explainability Modal ("Why this result? / وجہ جانیں")**: Transparently displays matched protocols, matched keywords, severity, and considered patient profile factors.
+
+### 🚨 Module 3: Emergency & Crisis Intervention
+- **Dynamic Emergency Action Banners**: Renders prominently only on `emergency` or `urgent` triage levels:
+  - 📞 **Call 1122**: Direct `tel:1122` one-click call to Rescue 1122 emergency services.
+  - 🏥 **Nearest Emergency Hospital**: Direct Google Maps geolocation link to nearby emergency facilities.
+- **Mental Health & Self-Harm Guardrail**: Instant pre-inference regex interceptor detects self-harm/crisis signals in Urdu, Roman Urdu, and English, providing immediate links to **Umang Mental Health Helpline (0317-4288665)** and emergency psychiatrist mapping.
+
+### 🎙️ Module 4: Bilingual Voice Input & Audio Readout
+- **Voice Dictation (`VoiceButton`)**: Web Speech API (`webkitSpeechRecognition`) supporting real-time speech-to-text with quick toggle between Pakistani Urdu (`ur-PK`) and English (`en-US`).
+- **Audio Readout (`AudioReadoutButton`)**: Browser SpeechSynthesis with automatic Urdu script detection (`/[\u0600-\u06FF]/`) to vocalize clinical advice for low-literacy patients.
+
+### 📋 Module 5: Clinical Handover Card (SBAR)
+- **Standardized Medical Summary**: Generates a 1-click **SBAR** report (**S**ituation, **B**ackground, **A**ssessment, **R**ecommendation).
+- **Bilingual & Exportable**: Language toggle between English and Urdu with one-click `.txt` file download to present to the doctor during clinic visits.
+
+### 👤 Module 6: Longitudinal Health Profile (`/profile` & `/dashboard`)
+- **Local SQLite Storage**: Manages patient vitals, chronic conditions, drug/food allergies, and active medications in SQLite (`tabibcare.db`).
+- **Instant Demo Login**: Ahmad Khan (54-year-old male, Type 2 Diabetes, Hypertension, Penicillin & Sulfa allergies) available with 1 click for instant evaluation.
 
 ---
 
-### 🚨 Module 3: Pre-Inference Safety Guardrails (`src/lib/guardrails.ts`)
-* **Zero-Latency Client-Side Regex Interceptor**: Evaluates user input before network transmission to catch emergencies and crisis signals immediately.
-* **Trilingual Self-Harm & Mental Crisis Patterns**:
-  * English: `suicide`, `kill myself`, `end my life`, `self harm`, `overdose`
-  * Roman Urdu: `khudkushi`, `khud ko marna`, `jaan de donga`, `zindagi khatam`, `zeher`
-  * Native Urdu: `خودکشی`, `مرنا چاہتا`, `زندگی ختم`, `جان دے دوں`, `زہر کھا`
-* **Trilingual Acute Physical Emergency Patterns**:
-  * English: `chest pain`, `heart attack`, `cannot breathe`, `stroke`, `unconscious`
-  * Roman Urdu: `seene mein dard`, `saans lene mein takleef`, `behosh`, `falij`, `khoon beh`
-  * Native Urdu: `سینے میں درد`, `سانس لینے میں دشواری`, `بے ہوش`, `فالج`
-* **Direct Emergency Hotline Escalation Banner**: Full-width alert linking directly to **Rescue 1122** (`<a href="tel:1122">`).
-* **Dedicated Crisis Safety Guardrail Banner**: Prominently displays the Pakistan Mental Health Helpline **Umang (`0317-4288665`)** for 24/7 confidential crisis support.
-* **Non-Diagnostic System Prompt Boundaries**: Prevents the AI from diagnosing diseases; mandates framing advice as educational triage recommendations.
-* **Mandatory Medical Disclaimer Modal**: Triggered on the first visit to `/triage` and `/meds` with `localStorage` acceptance persistence (`tabibcare_disclaimer_accepted`).
-* **Universal Legal Disclaimer Footer**: Embedded across every page layout.
+## 🛠️ 4. Technology Stack
 
----
-
-### 📋 Module 4: Doctor Handover Card — SBAR Clinical Summary (`src/components/triage/SbarCard.tsx`)
-* **Standard SBAR Clinical Format**: Translates the consultation into the recognized medical intake framework:
-  * **S (Situation)**: Primary presenting complaint, onset duration, and triage urgency level.
-  * **B (Background)**: Known chronic illnesses, recorded drug allergies, and current medications.
-  * **A (Assessment)**: Detailed symptom progression, vital indicator notes, and fever timeline.
-  * **R (Recommendation)**: Clinical focus recommendations for the examining physician.
-* **One-Click Instant Generation**: Automatically compiled from active triage conversation messages and user profile.
-* **Print-Ready Optimized Styling**: Integrates with `window.print()` and `@media print` CSS rules to hide UI chrome and format a clean A4 sheet.
-* **Patient Demographics Header**: Displays patient name, age, gender, consultation timestamp, and ID.
-* **Doctor Notes & Signature Box**: Dedicated space on the printed card for physician annotations.
-
----
-
-### 📊 Module 5: Patient Dashboard & Health Hub (`/dashboard`)
-* **Personalized Patient Header**: Greets the user with active session identity and demo status badge.
-* **Chronic Conditions Health Snapshot**: Visual chips highlighting persistent chronic diseases (e.g., Type 2 Diabetes, Hypertension).
-* **Drug Allergies Sentinel Badges**: Red alert badges highlighting active drug allergies for constant visibility.
-* **Active Prescriptions List**: Displays all ongoing long-term medications.
-* **Direct Module Quick Actions**: Large touch cards navigating directly to **Check Meds**, **Live Symptom Triage**, and **Medical Profile**.
-* **Emergency Quick-Dial Bar**: Always-accessible emergency dialer for Rescue 1122 and Umang.
-* **Route Authentication Protection**: Redirects unauthenticated visitors to `/login` immediately.
-
----
-
-### 👤 Module 6: Medical Profile Manager (`/profile`)
-* **Interactive Tag Management**:
-  * Add and remove **Chronic Medical Conditions** chips.
-  * Add and remove **Drug Allergies** chips with danger highlights.
-  * Add and remove **Active Prescriptions** chips.
-* **Demographics Editor**: Edit patient age, gender, and personal information.
-* **RESTful Synchronization**: Syncs updates instantly to SQLite via `PUT /api/profile` and `GET /api/profile`.
-* **Instant React Context Propagation**: Profile updates reflect immediately across the navbar, dashboard, triage, and meds modules without requiring page reload.
-* **Safe Sandbox for Demo User**: Demo user (Ahmad Khan) profile changes operate safely in memory without corrupting database state.
-
----
-
-### 🔑 Module 7: Authentication & Instant Judge Sandbox (`/login`, `/signup`)
-* **Lightweight Prototype Authentication**: Zero external vendor lock-in; operates completely offline on local SQLite.
-* **`⚡ Instant Judge Demo Login` Button**: One-click bypass button on `/login` that logs in immediately as **Ahmad Khan** (54yo male, Diabetes, Hypertension, Penicillin & Sulfa allergies).
-* **Medical Profile Onboarding during Signup**: Registration form captures name, email, password, age, gender, conditions, allergies, and medications in a single unified flow.
-* **Duplicate Email Detection**: Validates email uniqueness in SQLite before creating accounts.
-* **Session Storage Management**: Hydrates user identity (`id`, `name`, `email`) in `localStorage` (`tabibcare_user`).
-* **Secure Logout Flow**: Clears local session state and redirects safely to the landing page.
-
----
-
-### 🌐 Module 8: Bilingual Internationalization Engine (`src/lib/i18n/`)
-* **Full Bilingual Support**: Instant toggle between **English** and **Urdu (اردو)**.
-* **Persistent Language Toggle**: Accessible directly from the navigation bar.
-* **Context-Aware Typography**: Automatically applies appropriate line-heights and font hierarchies for Urdu script rendering.
-* **Complete Translation Dictionary**: 100+ translation keys covering navigation, buttons, badges, emergency banners, error toasts, and explanations.
-
----
-
-### 🎨 Module 9: Custom Markdown & UI Component Suite (`src/components/ui/`)
-* **Custom Markdown Renderer (`MarkdownRenderer.tsx`)**: Formats bold text, bullet points, numbered lists, and paragraphs with automatic emergency keyword highlighting (`1122`, `emergency`, `warning`).
-* **Strict Light Theme UI**:
-  * Primary Teal (`teal-600` / `teal-700`)
-  * Primary Light (`teal-50` / `teal-100`)
-  * Clean Medical Page Background (`slate-50`)
-  * Crisp Card Backgrounds (`white` with `slate-200` borders)
-  * High-Contrast Text (`slate-800` headings, `slate-700` body)
-* **Custom Button Component (`Button.tsx`)**: Supports primary, secondary, outline, and danger variants with built-in loading spinners.
-* **Status Badges (`Badge.tsx`, `TriageBadge.tsx`)**: Color-coded badges for Emergency (red), Urgent (amber), Routine (sky), and Home Care (emerald).
-* **Responsive Layout & Navigation (`Navbar.tsx`)**: Mobile hamburger menu, active link detection, user profile indicator, and language toggle.
-
----
-
-### 🗄️ Module 10: Backend Architecture & SQLite Auto-Migrations (`src/lib/`)
-* **High-Performance SQLite Singleton (`src/lib/db.ts`)**: Built on Node 22's native `node:sqlite` (`DatabaseSync`), offering synchronous, zero-latency database transactions.
-* **Auto-Schema Initializer (`src/lib/schema.ts`)**: Automatically creates and verifies all 4 relational tables on server startup:
-  * `users` (id, name, email, password, created_at)
-  * `health_profiles` (id, user_id, age, gender, conditions, allergies, current_medications, updated_at)
-  * `triage_sessions` (id, user_id, messages, triage_level, summary, created_at)
-  * `medication_checks` (id, user_id, medications_input, schedule_result, created_at)
-* **Groq SDK Integration (`src/lib/groq.ts`)**: Cloud LLM execution via `llama-3.1-8b-instant`.
-* **Structured Output Enforcement**: Uses Groq's `response_format: { type: "json_object" }` for rigid medication schedule validation.
-
----
-
-## 🛠️ 3. AI Integration & Technical Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                      Client Browser (React 19 / Next.js 15)             │
-│               Light Theme • Tailwind CSS • Lucide Icons • Bilingual     │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │ HTTP (JSON / SSE Stream)
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                     Next.js 15 Serverless API Routes                    │
-│   /api/auth/*        /api/meds         /api/triage       /api/profile   │
-└────────────┬───────────────────────────────┬────────────────────────────┘
-             │                               │
-             ▼                               ▼
-┌─────────────────────────┐     ┌─────────────────────────────────────────┐
-│    Embedded Database    │     │       AI & RAG Knowledge Engine         │
-│   (node:sqlite local)   │     │                                         │
-│ - users                 │     │  1. In-Memory RAG Scorer (retriever.ts) │
-│ - health_profiles       │     │     15 WHO Clinical Protocol Chunks     │
-│ - triage_sessions       │     │  2. Dynamic Context Assembly            │
-│ - medication_checks     │     │     Long-Term Profile + Guidelines      │
-└─────────────────────────┘     │  3. Groq LPU Inference Cloud            │
-                                │     - Model: llama-3.1-8b-instant       │
-                                │     - Structured JSON Mode (/api/meds)  │
-                                │     - SSE Text Stream (/api/triage)     │
-                                └─────────────────────────────────────────┘
-```
-
-### Dual-Layer Memory Architecture
-1. **Short-Term Memory**: Multi-turn conversation context preserved across triage interactions so follow-up symptoms and clarifications are understood within context.
-2. **Long-Term Memory**: Persistent SQLite medical profile (`health_profiles` table) storing chronic conditions, allergies, and active prescriptions. Injected into every system prompt prior to inference.
-
----
-
-## 🚀 4. Startup Pitch & Business Model (25% Weight)
-
-TabeebCare is architected as a scalable, commercially viable digital health literacy enterprise.
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         TabeebCare Ecosystem                            │
-├────────────────────┬───────────────────────────────┬────────────────────┤
-│   B2C (Freemium)   │     B2B (Telehealth APIs)     │ B2B2C (Pharmacies) │
-│  Free Triage &     │ Licensing SBAR Handover Card  │ Co-branded digital │
-│  Medicine Schedule │  to Sehat Kahani, Marham,     │ schedules with     │
-│  Family Sub ($2/mo)│  Oladoc, & EMR hospital apps  │ Servaid & FazalDin │
-└────────────────────┴───────────────────────────────┴────────────────────┘
-```
-
-### 1. Market Opportunity (Pakistan)
-* **240M+ Population**: 60M+ chronic disease patients (Diabetes, Hypertension, Cardiovascular).
-* **130M+ Smartphones**: Rapid 4G penetration across Tier-2 and Tier-3 cities.
-* **$3.5B Annual Out-of-Pocket Healthcare Spend**: Most of which is wasted on improper drug adherence and late-stage emergency admissions.
-
-### 2. Revenue Streams
-| Stream | Description | Pricing Model |
+| Layer | Technology | Purpose & Implementation Details |
 |:---|:---|:---|
-| **B2C Freemium App** | Free core triage and medication schedules. Premium tier includes multi-profile family accounts, WhatsApp medication reminders, and monthly health reports. | PKR 500 / month ($1.80/mo) |
-| **B2B Telehealth Licensing** | Integrating TabeebCare’s pre-consultation SBAR intake into telehealth apps (Sehat Kahani, Marham, Oladoc) to double doctor throughput. | Per-consultation API fee |
-| **Pharmacy Retail Integration** | Partnering with retail pharmacy chains (Servaid, Fazal Din) to print QR codes on prescription bags leading directly to TabeebCare's 24-hr visual schedule. | B2B SaaS subscription |
-| **Public Health & NGO Impact** | Deploying low-bandwidth triage tools to Community Lady Health Workers (LHWs) in rural districts. | Subsidized grant / G2B contracts |
+| **Frontend Framework** | **Next.js 14 / 15 (App Router)** | Server Components, Client Components, and responsive layouts |
+| **Language** | **TypeScript 5.x** | Static type safety across frontend and API route handlers |
+| **Styling & Theme** | **Tailwind CSS 3.4** | Accessible light theme (`teal-600`, `slate-50`, `white`), zero dark theme |
+| **Icons** | **Lucide React** | Consistent, lightweight SVG iconography |
+| **Backend API** | **Next.js Route Handlers (Node.js)** | Server-side endpoints (`/api/auth/*`, `/api/meds`, `/api/triage`, `/api/profile`) |
+| **Database** | **SQLite (`node:sqlite`)** | Built-in native Node.js `DatabaseSync` engine (`tabibcare.db`) — zero external DB dependencies |
+| **AI Inference** | **Groq Cloud API (`groq-sdk`)** | High-speed LLM inference (`openai/gpt-oss-20b` / `llama-3.1-8b-instant`) |
+| **Clinical Knowledge Base** | **In-Memory RAG** | 15 WHO-inspired clinical protocol chunks with keyword matching |
+| **Voice & Speech** | **Web Speech API** | Browser-native `SpeechRecognition` and `SpeechSynthesis` |
+| **Authentication** | **Prototype Auth** | `localStorage` session state (`tabibcare_user`) + SQLite `users` table |
+| **Deployment Target** | **Vercel** | Edge network and serverless functions (`tabeeb-care.vercel.app`) |
 
 ---
 
-## 📚 5. Clinical RAG Knowledge Base (15 Protocols)
+## 🏗️ 5. System Architecture
 
-TabeebCare uses a zero-latency in-memory keyword-scored RAG retriever (`src/lib/rag/retriever.ts`) grounded in 15 primary care clinical protocols:
+```mermaid
+flowchart TD
+    User["Patient / Caregiver / Evaluator"]
 
-1. **Cardiac Emergency & Acute Chest Pain** (ACS, angina, jaw/arm pain, chewable aspirin guidance)
-2. **Acute Respiratory Distress & Asthma Exacerbation** (Dyspnea, inhaler spacer guidance, 1122 escalation)
-3. **Acute Stroke & Neurological Deficit** (FAST protocol: Face, Arm, Speech, Time)
-4. **High Fever, Rigors & Sepsis Warning** (Temperature >39°C, rigors, dengue/malaria endemic cautions)
-5. **Acute Abdomen & Severe Abdominal Pain** (Appendicitis, perforation, peritoneal signs)
-6. **Head Trauma, Concussion & Intracranial Pressure** (Loss of consciousness, vomiting, pupillary asymmetry)
-7. **Severe Allergic Reaction & Anaphylaxis** (Stridor, angioedema, epinephrine referral)
-8. **Diabetic Ketoacidosis & Severe Hypoglycemia** (Blood sugar collapse, fruity breath, disorientation)
-9. **Hypertensive Urgency and Crisis** (BP >180/120 with target organ symptoms)
-10. **Poisoning, Chemical Ingestion & Drug Overdose** (Toxin exposure, antidotes, no vomiting induction)
-11. **Pediatric High Fever & Febrile Convulsion** (Infant seizures, hydration, cooling measures)
-12. **Acute Psychological Distress & Crisis Intervention** (Umang Mental Health Helpline 0317-4288665)
-13. **Acute Traumatic Wound & Uncontrolled Bleeding** (Direct pressure, tourniquet, shock prevention)
-14. **Urinary Tract Infection & Renal Colic** (Flank pain, dysuria, hematuria)
-15. **Common Cold, Viral Pharyngitis & Flu** (Conservative home care, hydration, honey/steam)
+    subgraph Client["Frontend Client (Next.js App Router)"]
+        Landing["Landing Page (/)"]
+        MedsUI["Prescription Scanner (/meds)"]
+        TriageUI["Triage Live Chat (/triage)"]
+        ProfileUI["Health Profile (/profile)"]
+        VoiceIO["Voice Dictation & Audio Readout"]
+        SbarUI["SBAR Clinical Handover Modal"]
+    end
+
+    subgraph Backend["Next.js Server-Side API Handlers"]
+        AuthRoutes["/api/auth (Login, Signup, Demo)"]
+        MedsRoute["/api/meds (Groq JSON Extraction)"]
+        TriageRoute["/api/triage (SSE Stream & Protocol Match)"]
+        ProfileRoute["/api/profile (Vitals & Records)"]
+    end
+
+    subgraph InternalRAG["Clinical Knowledge Base & Memory"]
+        Retriever["Keyword RAG Retriever (15 WHO Protocols)"]
+        ContextBuilder["Context Builder (Profile + Protocols)"]
+        Guardrails["Crisis & Red Flag Regex Interceptor"]
+    end
+
+    subgraph DataStore["Local Database (node:sqlite)"]
+        DB[("tabibcare.db\n- users\n- health_profiles\n- triage_sessions\n- medication_checks")]
+    end
+
+    subgraph ExternalAI["External Inference Engine"]
+        Groq["Groq Cloud API\n(llama-3.1-8b-instant / gpt-oss-20b)"]
+    end
+
+    User -->|"Interacts with UI"| Client
+    Client -->|"Speech / Text"| VoiceIO
+    Client -->|"HTTP Requests"| Backend
+
+    TriageUI -->|"POST /api/triage (SSE)"| TriageRoute
+    MedsUI -->|"POST /api/meds"| MedsRoute
+    ProfileUI -->|"GET / POST /api/profile"| ProfileRoute
+    Landing -->|"POST /api/auth/demo"| AuthRoutes
+
+    TriageRoute -->|"Query RAG Guidelines"| Retriever
+    TriageRoute -->|"Fetch Patient History"| DB
+    TriageRoute -->|"Assemble Prompt"| ContextBuilder
+    ContextBuilder -->|"Run Safety Checks"| Guardrails
+    ContextBuilder -->|"Stream Tokens"| Groq
+    Groq -->|"Token Stream + Triage Level"| TriageRoute
+
+    MedsRoute -->|"Verify Allergies & Format"| Groq
+    AuthRoutes -->|"Read / Write"| DB
+    ProfileRoute -->|"Read / Write"| DB
+
+    TriageRoute -->|"SSE First Event: Meta + Tokens"| TriageUI
+    MedsRoute -->|"Structured 24hr Schedule"| MedsUI
+    TriageUI -->|"1-Click Handover"| SbarUI
+```
 
 ---
 
-## 🎨 6. UI/UX Design System & Accessibility
-
-* **Strict Light Theme**: Medical White (`#ffffff`), Clean Slate Background (`#f8fafc`), Soft Border (`#e2e8f0`).
-* **Medical Primary Palette**: Deep Clinical Teal (`#0d9488` / `teal-600`) and Fresh Teal (`#f0fdfa` / `teal-50`).
-* **Emergency Palette**: Alert Crimson (`#ef4444` / `red-500`) and Muted Rose (`#fef2f2` / `red-50`).
-* **Warning / Urgent Palette**: Warm Amber (`#f59e0b` / `amber-500`) and Soft Amber (`#fffbeb` / `amber-50`).
-* **Safe / Home Care Palette**: Reassuring Emerald (`#10b981` / `emerald-500`).
-* **Bilingual Switcher**: Instant one-click toggle between English and Urdu script (اردو).
-* **Responsive Layout**: Optimized for mobile phones (key for rural users and on-the-go patient intake).
-
----
-
-## 🛡️ 7. Safety, Ethical Guardrails & Compliance
-
-1. **Prominent Medical Disclaimer**: Displayed globally in the footer and via mandatory modal before accessing triage or medication features:
-   > *"TabeebCare is an educational health literacy and clinical triage navigation tool. It does not replace professional medical advice, diagnosis, or treatment."*
-2. **Emergency Red-Flag Escalation**: Whenever life-threatening symptoms are detected, normal conversation is superseded by a full-width **Rescue 1122** calling button.
-3. **Mental Health Crisis Interceptor**: Any detected distress or self-harm triggers compassionate empathy and immediate referral to Pakistan’s mental health crisis line: **Umang Helpline (0317-4288665)**.
-4. **Synthetic Data Only**: 100% compliant with hackathon privacy rules. No real patient records are stored or transmitted.
-
----
-
-## ⏱️ 8. 60-Second Live Demo Script for Judges
-
-To demonstrate TabeebCare's complete end-to-end journey in under 60 seconds:
+## 📂 6. Project Structure
 
 ```
-Step 1: Open http://localhost:3000/login
-        Click "⚡ Instant Judge Demo Login"
-        → Logged in immediately as Ahmad Khan (54yo, Diabetes, Hypertension, Penicillin Allergy).
-
-Step 2: Go to Check Meds (/meds)
-        Click "Antibiotic Course (الرجی ٹیسٹ)" preset (Augmentin 625mg + Panadol)
-        Click "Analyze Prescriptions"
-        → Watch AI generate 24-hr timetable (Morning/Afternoon/Evening/Night) with Urdu translations.
-        → Observe RED ALLERGY ALERT: "Warning: You are allergic to Penicillin. Augmentin contains amoxicillin."
-
-Step 3: Go to Symptom Triage (/triage)
-        Click starter chip: "Crushing Chest Pain & Breathing"
-        → Observe instant sub-second streaming response.
-        → Red 🚨 Emergency Banner appears with 1-click "Call 1122 (Rescue)" button.
-
-Step 4: Click "Doctor Card (SBAR)"
-        → Instant clinical handover card ready to print or show to the physician.
+SDG_03/
+├── .agents/
+│   └── AGENTS.md                    # Core project identity, design system, and constraints
+├── .github/
+│   └── workflows/
+│       └── ci.yml                   # CI/CD pipeline: lint, type-check, and build on Node 22
+├── src/
+│   ├── app/                         # Next.js App Router
+│   │   ├── (pages)/
+│   │   │   ├── dashboard/page.tsx   # Authenticated patient portal and vitals summary
+│   │   │   ├── login/page.tsx       # Prototype user login and 1-click Demo button
+│   │   │   ├── meds/page.tsx        # Prescription demystifier and allergy sentinel
+│   │   │   ├── profile/page.tsx     # Patient medical history editor
+│   │   │   ├── signup/page.tsx      # Patient account registration
+│   │   │   ├── triage/page.tsx      # Live triage chat, voice input, emergency alerts
+│   │   │   ├── layout.tsx           # Global HTML wrapper, UserProvider, Navbar, Footer
+│   │   │   └── page.tsx             # Interactive landing page and feature highlights
+│   │   ├── api/                     # Server-Side API Handlers
+│   │   │   ├── auth/
+│   │   │   │   ├── demo/route.ts    # Instant evaluator login (Ahmad Khan, id: 999)
+│   │   │   │   ├── login/route.ts   # Plaintext credential lookup
+│   │   │   │   └── signup/route.ts  # User and health profile initialization
+│   │   │   ├── meds/route.ts        # Groq JSON prescription parser and allergy check
+│   │   │   ├── profile/route.ts     # Health profile retrieve and update
+│   │   │   └── triage/route.ts      # SSE streaming triage consultation and RAG metadata
+│   │   └── globals.css              # Tailwind CSS directives and custom scrollbar styling
+│   ├── components/                  # Modular React UI Components
+│   │   ├── layout/
+│   │   │   ├── Footer.tsx           # Responsive footer with national emergency hotlines
+│   │   │   ├── MedicalDisclaimer.tsx# Educational disclaimer modal and banner
+│   │   │   └── Navbar.tsx           # Navigation bar with language switcher (EN / اردو)
+│   │   ├── meds/
+│   │   │   └── MedicineCard.tsx     # 24-hour visual schedule and allergy warning chip
+│   │   ├── triage/
+│   │   │   ├── ChatBubble.tsx       # Message bubble with markdown and audio playback
+│   │   │   ├── CrisisGuardrailBanner.tsx # Self-harm intervention and Umang helpline
+│   │   │   ├── EmergencyBanner.tsx  # Dynamic emergency banner with 1122 and Google Maps
+│   │   │   ├── ExplainabilityModal.tsx # "Why this level?" clinical RAG explanation
+│   │   │   ├── SbarCard.tsx         # Standardized SBAR doctor handover summary
+│   │   │   └── TriageBadge.tsx      # Urgency level pill (Emergency, Urgent, Routine, Home)
+│   │   └── ui/
+│   │       ├── AudioReadoutButton.tsx # SpeechSynthesis reader with Urdu script detection
+│   │       ├── Badge.tsx            # Variant badge component (primary, warning, emergency)
+│   │       ├── Button.tsx           # Standardized button with loading state
+│   │       ├── Card.tsx             # Card container primitives
+│   │       ├── Input.tsx            # Form input field with error messaging
+│   │       ├── MarkdownRenderer.tsx # Custom markdown parser with emergency highlights
+│   │       └── VoiceButton.tsx      # Web Speech API mic button with ur-PK / en-US toggle
+│   ├── context/
+│   │   └── UserContext.tsx          # React Context: auth state, active profile, i18n
+│   └── lib/                         # Server & Application Utilities
+│       ├── db.ts                    # SQLite database singleton (node:sqlite)
+│       ├── groq.ts                  # Groq Cloud SDK client instance
+│       ├── guardrails.ts            # Client & server regex crisis and red-flag guardrails
+│       ├── schema.ts                # Database DDL: users, profiles, sessions, meds
+│       ├── i18n/
+│       │   └── translations.ts      # Bilingual English/Urdu translation dictionary
+│       ├── memory/
+│       │   └── context_builder.ts   # System prompt assembler (Profile + RAG + Safety)
+│       ├── prompts/
+│       │   ├── meds_prompt.ts       # Structured JSON prompt for medicine parsing
+│       │   └── triage_prompt.ts     # Clinical triage system instructions
+│       └── rag/
+│           ├── clinical_protocols.ts# 15 WHO-inspired clinical protocol chunks
+│           └── retriever.ts         # In-memory keyword scorer and context extractor
+├── .env.example                     # Environment variable template
+├── next.config.mjs                  # Next.js build configuration
+├── package.json                     # Project dependencies and script definitions
+├── postcss.config.js                # PostCSS configuration for Tailwind CSS
+├── tailwind.config.js               # Tailwind design system configuration
+└── tsconfig.json                    # TypeScript compiler configuration
 ```
 
 ---
 
-## 💻 9. Local Setup & Verification Guide
+## 🚀 7. Installation and Setup
 
 ### Prerequisites
-* Node.js v20+ or v22+
-* Groq Cloud API Key ([console.groq.com](https://console.groq.com))
+- **Node.js**: `v20.x` or `v22.x` (Node 22 is recommended for native `node:sqlite`)
+- **npm**: `v10.x` or higher
+- **Groq Cloud API Key**: Free tier available from [console.groq.com](https://console.groq.com)
 
-### 1. Clone & Install
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/muhammadali382/SDG_03.git
 cd SDG_03
 
-# Ensure you are on the dev branch
+# Ensure you are on the primary branch
 git checkout dev
+```
 
-# Install dependencies
+### 2. Install Dependencies
+```bash
 npm install
 ```
 
-### 2. Configure Environment
+### 3. Configure Environment Variables
+Create a `.env.local` file in the project root:
 ```bash
 cp .env.example .env.local
 ```
-Edit `.env.local` with your Groq API key:
+Add your Groq API key:
 ```env
+# Groq Cloud API Key (Required)
 GROQ_API_KEY=gsk_your_groq_api_key_here
+
+# Groq Model Selection (Optional - defaults to openai/gpt-oss-20b)
+GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-### 3. Run Development Server
+### 4. Run the Development Server
 ```bash
 npm run dev
 ```
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
-### 4. Build & Type Check Verification
+### 5. Verify Build and TypeScript Types
 ```bash
-# TypeScript verification
+# Verify TypeScript compiles with zero errors
 npx tsc --noEmit
 
-# Production build
+# Verify production build succeeds
 npm run build
 ```
 
 ---
 
-## 👥 10. Submission & Repository Information
+## 🔐 8. Environment Variables
 
-* **Competition**: AI Hackathon & Startup Pitch — Seekers Tech & Computing Society (STCS)
-* **Venue**: Minhaj University Lahore
-* **Date**: Tuesday, 17 November 2026 (Live Freeze at 3:55 PM)
-* **Official Repository**: [https://github.com/muhammadali382/SDG_03](https://github.com/muhammadali382/SDG_03)
-* **Live Deployment Target**: [https://tabeeb-care.vercel.app](https://tabeeb-care.vercel.app)
-* **Required Collaborators Invited**:
-  * `@httpsharis` (https://github.com/httpsharis)
-  * `@anamta-JINX` (https://github.com/anamta-JINX)
-* **Active Branches**:
-  * `main`: Protected production release branch
-  * `dev`: Primary development branch
+| Variable | Description | Default Value | Required |
+|:---|:---|:---|:---:|
+| `GROQ_API_KEY` | Authentication key for Groq Cloud LLM API | *None* | **Yes** |
+| `GROQ_MODEL` | LLM model identifier on Groq Cloud | `openai/gpt-oss-20b` | No |
+| `NODE_ENV` | Runtime environment mode | `development` | No |
+
+---
+
+## 📡 9. API Documentation
+
+### 1. Instant Evaluator Demo Login
+* **Endpoint**: `POST /api/auth/demo`
+* **Purpose**: Generates an in-memory session for the demo persona (Ahmad Khan) without database side-effects.
+* **Request**: No body required.
+* **Response (`200 OK`)**:
+```json
+{
+  "success": true,
+  "user": {
+    "id": 999,
+    "name": "Ahmad Khan (احمد خان)",
+    "email": "ahmad.demo@tabeebcare.pk",
+    "isDemo": true
+  },
+  "profile": {
+    "age": 54,
+    "gender": "Male",
+    "conditions": ["Type 2 Diabetes", "Hypertension"],
+    "allergies": ["Sulfa", "Penicillin"],
+    "current_medications": ["Metformin 500mg", "Amlodipine 5mg"]
+  }
+}
+```
+
+---
+
+### 2. Medication Demystifier & Allergy Check
+* **Endpoint**: `POST /api/meds`
+* **Purpose**: Analyzes free-text medications, generates 24-hr schedules, and checks for allergy conflicts.
+* **Request**:
+```json
+{
+  "medications": "Augmentin 625mg, Panadol 500mg",
+  "userId": 999
+}
+```
+* **Response (`200 OK`)**:
+```json
+{
+  "success": true,
+  "data": {
+    "medications": [
+      {
+        "name": "Augmentin 625mg",
+        "generic": "Amoxicillin / Clavulanic Acid",
+        "purpose": "Treats bacterial infections.",
+        "purpose_urdu": "بیکٹیریائی انفیکشن کا علاج کرتا ہے۔",
+        "schedule": {
+          "morning": true,
+          "afternoon": false,
+          "evening": true,
+          "night": false
+        },
+        "food_instruction": "Take with food to reduce stomach upset.",
+        "food_instruction_urdu": "کھانے کے ساتھ لیں تاکہ معدے میں تکلیف نہ ہو۔",
+        "warnings": ["Complete the full course even if feeling better."],
+        "allergy_conflict": true,
+        "allergy_message": "**Allergy to Penicillin detected. Do NOT take Augmentin.**"
+      },
+      {
+        "name": "Panadol 500mg",
+        "generic": "Acetaminophen (Paracetamol)",
+        "purpose": "Relieves pain and reduces fever.",
+        "purpose_urdu": "درد اور بخار کو کم کرتا ہے۔",
+        "schedule": {
+          "morning": true,
+          "afternoon": true,
+          "evening": false,
+          "night": false
+        },
+        "food_instruction": "Can be taken with or without food.",
+        "food_instruction_urdu": "کھانے کے ساتھ یا بغیر لے سکتے ہیں۔",
+        "warnings": ["Do not exceed 8 tablets in 24 hours."],
+        "allergy_conflict": false,
+        "allergy_message": null
+      }
+    ],
+    "general_advice": "Always finish the full antibiotic course.",
+    "general_advice_urdu": "ہمیشہ اینٹی بائیوٹک کا مکمل کورس پورا کریں۔"
+  }
+}
+```
+
+---
+
+### 3. Symptom Triage Consultation (Server-Sent Events)
+* **Endpoint**: `POST /api/triage`
+* **Purpose**: Evaluates patient symptoms against clinical RAG protocols, streams live reasoning, and assigns an urgency tier.
+* **Request**:
+```json
+{
+  "messages": [
+    { "role": "user", "content": "I have sudden crushing chest pain and shortness of breath." }
+  ],
+  "userId": 999
+}
+```
+* **Response Stream**:
+```http
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Transfer-Encoding: chunked
+
+data: {"type":"meta","protocols":[{"id":"cv-01","title":"Adult Chest Pain & Acute Coronary Syndrome"}],"matchedKeywords":["chest pain","shortness of breath"],"severity":"emergency","profileUsed":{"conditions":["Type 2 Diabetes","Hypertension"],"allergies":["Sulfa","Penicillin"]}}
+
+TRIAGE_LEVEL: emergency
+
+This is a medical emergency. Your symptoms indicate possible cardiac ischemia. Please call 1122 immediately and proceed to the nearest emergency department.
+```
+
+---
+
+### 4. Health Profile Management
+* **Endpoint**: `GET /api/profile?userId=1` & `POST /api/profile`
+* **Purpose**: Retrieves or updates the patient's age, gender, chronic conditions, and recorded allergies.
+* **POST Request**:
+```json
+{
+  "userId": 1,
+  "age": 45,
+  "gender": "Female",
+  "conditions": ["Asthma"],
+  "allergies": ["Aspirin"],
+  "current_medications": ["Ventolin Inhaler"]
+}
+```
+
+---
+
+## 🤖 10. AI Agent Architecture & Safety Guardrails
+
+TabeebCare employs a specialized multi-agent architecture with strict clinical boundary safeguards:
+
+```mermaid
+flowchart LR
+    UserInput["Patient Input"] --> PreGuard{"Pre-Inference Regex\nGuardrails"}
+    
+    PreGuard -->|"Self-Harm / Crisis"| CrisisAction["Direct Umang & 1122 Escalation"]
+    PreGuard -->|"Safe Query"| Retriever["Keyword RAG Matcher"]
+    
+    Retriever -->|"Top Protocols"| ContextBuilder["Context Assembler"]
+    DB[("Patient History")] -->|"Vitals & Allergies"| ContextBuilder
+    
+    ContextBuilder -->|"System Prompt + Profile + Rules"| GroqLLM["Groq LPU (llama-3.1-8b)"]
+    
+    GroqLLM --> OutputGuard{"Post-Inference Parser"}
+    OutputGuard -->|"Format TRIAGE_LEVEL"| StreamRenderer["Live UI Stream"]
+```
+
+### Safety & Guardrail Features:
+1. **Pre-Inference Interceptor (`src/lib/guardrails.ts`)**: Evaluates incoming text before invoking the LLM. Detects suicidal ideation, self-harm, or severe acute emergencies across English, Roman Urdu (`"mar lu ga"`, `"khud kushi"`), and Urdu text.
+2. **Deterministic Fallbacks**: If network interruption occurs, the client automatically falls back to an emergency advisory instructing immediate contact with Rescue 1122.
+3. **No Definitive Diagnosing**: Prompt engineering explicitly prohibits the model from making definitive medical assertions. The agent uses educational phrasing: *"These symptoms may indicate [Possibility] and require evaluation by a physician."*
+4. **Allergy Conflict Enforcement**: When cross-referencing prescriptions, the agent checks beta-lactam and sulfonamide classes against patient records, providing immediate warnings against contraindicated intake.
+
+---
+
+## 📸 11. Screenshots & 60-Second Demo Script
+
+### ⏱️ 60-Second Live Evaluation Script for Judges
+1. **Step 1: Instant Login**  
+   Visit `/login` and click **"⚡ Instant Judge Demo Login"**. Ahmad Khan's profile (54-year-old male, Type 2 Diabetes, Hypertension, Penicillin allergy) is loaded immediately.
+2. **Step 2: Prescription Scanning (`/meds`)**  
+   Click the **"Antibiotic Course"** preset (`Augmentin 625mg, Panadol 500mg`) and click **"Analyze Prescriptions"**.  
+   *Result*: A visual 24-hour schedule appears alongside a **bold red Penicillin allergy conflict alert**.
+3. **Step 3: Clinical Triage (`/triage`)**  
+   Click the starter chip: **"Crushing Chest Pain & Breathing"**.  
+   *Result*: The response streams in real time, assigning `TRIAGE_LEVEL: emergency`, displaying the **Call 1122** button, **Nearest Hospital** map link, and an explainability chip explaining the matched WHO protocol.
+4. **Step 4: Voice & SBAR Handover**  
+   Test the speaker readout via the **AudioReadoutButton**, then click **"Doctor Card (SBAR)"** to view and download the bilingual clinical handover report.
+
+### 🖼️ Application Interface Captures
+| View | Description |
+|:---|:---|
+| **Prescription Demystifier (`/meds`)** | Visual 24-hr dosing timeline, food instructions, and allergy warning badges |
+| **Symptom Triage (`/triage`)** | Live SSE chat, WHO protocol explainability modal, and emergency action banners |
+| **Doctor Handover Card (SBAR)** | Structured Situation, Background, Assessment, and Recommendation modal with text export |
+| **Patient Profile (`/profile`)** | Chronic condition management and drug allergy records stored in SQLite |
+
+---
+
+## 🔒 12. Security and Medical Disclaimer
+
+### Data Security & Privacy
+- **Local SQLite Engine**: All persistent data is stored in the local SQLite database (`tabibcare.db`) or local device storage.
+- **No External Data Brokerage**: Patient records are never sold, indexed, or shared with third-party tracking services.
+- **Client-Side Storage**: Active session credentials and user profile caches reside securely in the browser's `localStorage`.
+
+### Mandatory Medical Disclaimer
+> **Medical Disclaimer**: TabeebCare is an educational health literacy, prescription demystifier, and triage navigation tool. It does not replace professional medical advice, formal clinical diagnosis, or emergency medical treatment. Users should always consult qualified healthcare providers for medical decisions. If you suspect a life-threatening medical emergency, call **1122** or visit the nearest emergency department immediately.
+
+---
+
+## 🗺️ 13. Current Limitations & Future Roadmap
+
+### Implemented Functionality ✅
+- Free-text prescription parsing into 4-phase visual dosing schedules (Morning, Afternoon, Evening, Night).
+- Automated drug allergy conflict alerts (e.g., Penicillin cross-reactivity).
+- Real-time conversational triage streaming with line-1 urgency classification.
+- In-memory RAG grounding over 15 primary care protocols.
+- Trilingual crisis and self-harm detection with Umang Helpline referral (0317-4288665).
+- Web Speech API microphone dictation (`ur-PK` / `en-US`) and text-to-speech readout.
+- Bilingual SBAR clinical handover card generation and text export.
+- Full RTL layout support for Urdu script.
+
+### Known Limitations ⚠️
+- Prescriptions must currently be typed or pasted as text (OCR scanning is planned for a future release).
+- SQLite storage is local to the instance and not distributed across multi-region server clusters.
+- Voice recognition accuracy depends on browser Web Speech API support.
+
+### Future Roadmap 🔮
+- **Mobile Camera Prescription OCR**: Integration of offline on-device document OCR to digitize doctor prescriptions directly from phone cameras.
+- **Offline Protocol Sync**: Progressive Web App (PWA) offline caching for triage guidance in remote areas with zero internet connectivity.
+- **Direct EHR / EMR Integration**: FHIR-compliant export of SBAR handover notes directly into Pakistani hospital management systems.
+
+---
+
+## 🤝 14. Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. **Fork the Repository**: Click the **Fork** button on GitHub.
+2. **Create a Feature Branch**:
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Commit Your Changes**: Follow present-tense commit message conventions:
+   ```bash
+   git commit -m "Add feature name or fix description"
+   ```
+4. **Push to the Branch**:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+5. **Open a Pull Request**: Submit your pull request against the `dev` branch for review.
+
+---
+
+## 📜 15. License and Acknowledgements
+
+### License
+This project was developed as a competition submission for the **Seekers Tech & Computing Society (STCS) Student Week 2026 AI Hackathon** at Minhaj University Lahore. The license has not yet been specified; all rights are currently reserved by the original authors.
+
+### Acknowledgements
+- **Minhaj University Lahore & Seekers Tech & Computing Society (STCS)** for organizing the Student Week 2026 AI Hackathon.
+- **United Nations Sustainable Development Goals (SDG 3)** for providing the mission framework for accessible primary healthcare.
+- **Groq Cloud** for high-speed LPU inference capabilities.
+- **Next.js & Vercel** for the modern App Router architecture.
