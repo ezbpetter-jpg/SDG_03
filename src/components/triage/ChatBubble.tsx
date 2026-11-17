@@ -1,18 +1,25 @@
 "use client";
 
 import React from "react";
-import { User as UserIcon, Bot } from "lucide-react";
+import { User as UserIcon, Bot, HelpCircle } from "lucide-react";
 import { TriageBadge, TriageLevel } from "./TriageBadge";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
+import { AudioReadoutButton } from "../ui/AudioReadoutButton";
 import clsx from "clsx";
 
 interface ChatBubbleProps {
   role: "user" | "assistant" | "system";
   content: string;
   lang?: "en" | "ur";
+  onOpenExplain?: () => void;
 }
 
-export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
+export function ChatBubble({
+  role,
+  content,
+  lang = "en",
+  onOpenExplain,
+}: ChatBubbleProps) {
   const isUser = role === "user";
   const isUrdu = lang === "ur";
 
@@ -71,9 +78,20 @@ export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
 
         {/* Bubble */}
         <div className="flex flex-col space-y-1.5 flex-1 min-w-0">
+          {/* Triage Urgency Badge & "Why this level?" chip */}
           {triageLevel && !isUser && (
-            <div className="mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <TriageBadge level={triageLevel} lang={lang} />
+              {onOpenExplain && (
+                <button
+                  type="button"
+                  onClick={onOpenExplain}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200/80 px-2 py-0.5 rounded-md transition-colors shadow-2xs"
+                >
+                  <HelpCircle className="w-3 h-3 text-teal-600" />
+                  <span>{isUrdu ? "وجہ جانیں" : "Why this level?"}</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -88,7 +106,13 @@ export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
             {isUser ? (
               <p className="whitespace-pre-wrap break-words">{cleanContent}</p>
             ) : cleanContent.trim() ? (
-              <MarkdownRenderer content={cleanContent} isUrdu={isUrdu} />
+              <>
+                <MarkdownRenderer content={cleanContent} isUrdu={isUrdu} />
+                {/* Audio Readout Speaker Button */}
+                <div className="pt-2.5 mt-2 border-t border-slate-100 flex items-center justify-between">
+                  <AudioReadoutButton text={content} />
+                </div>
+              </>
             ) : (
               <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
                 <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />

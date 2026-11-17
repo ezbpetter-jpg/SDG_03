@@ -7,6 +7,8 @@ import { ChatBubble } from "@/components/triage/ChatBubble";
 import { EmergencyBanner } from "@/components/triage/EmergencyBanner";
 import { CrisisGuardrailBanner } from "@/components/triage/CrisisGuardrailBanner";
 import { SbarCard } from "@/components/triage/SbarCard";
+import { ExplainabilityModal, RetrievalMeta } from "@/components/triage/ExplainabilityModal";
+import { VoiceButton } from "@/components/ui/VoiceButton";
 import { MedicalDisclaimerModal } from "@/components/layout/MedicalDisclaimer";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -17,14 +19,12 @@ import {
   Sparkles,
   FileText,
   RotateCcw,
-  AlertOctagon,
   Bot,
-  Activity,
   ShieldCheck,
   PhoneCall,
   HeartHandshake,
   UserCheck,
-  HeartPulse,
+  HelpCircle,
 } from "lucide-react";
 
 interface Message {
@@ -43,6 +43,10 @@ export default function TriagePage() {
   const [currentTriageLevel, setCurrentTriageLevel] = useState<string | null>(null);
   const [isMentalHealth, setIsMentalHealth] = useState(false);
   const [isSbarOpen, setIsSbarOpen] = useState(false);
+
+  // Feature 2: Explainability metadata state
+  const [retrievalMeta, setRetrievalMeta] = useState<RetrievalMeta | null>(null);
+  const [isExplainOpen, setIsExplainOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -122,6 +126,8 @@ export default function TriagePage() {
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
+      let rawBuffer = "";
+      let metaCaptured = false;
       let assistantResponse = "";
 
       let done = false;
@@ -130,7 +136,26 @@ export default function TriagePage() {
         done = doneReading;
         if (value) {
           const chunk = decoder.decode(value, { stream: true });
-          assistantResponse += chunk;
+          rawBuffer += chunk;
+
+          // Parse the first SSE event for retrieval metadata without breaking tokens
+          if (!metaCaptured) {
+            const metaMatch = rawBuffer.match(/^data:\s*({[\s\S]*?})\n\n/);
+            if (metaMatch) {
+              try {
+                const parsed = JSON.parse(metaMatch[1]);
+                if (parsed.type === "meta") {
+                  setRetrievalMeta(parsed);
+                  metaCaptured = true;
+                  rawBuffer = rawBuffer.slice(metaMatch[0].length);
+                }
+              } catch (e) {
+                console.warn("Failed to parse retrieval meta event:", e);
+              }
+            }
+          }
+
+          assistantResponse = rawBuffer;
 
           // Detect TRIAGE_LEVEL: emergency from stream
           const match = assistantResponse.match(/TRIAGE_LEVEL:\s*(\w+)/i);
@@ -147,7 +172,7 @@ export default function TriagePage() {
             setIsMentalHealth(true);
           }
 
-          // Update messages only when content or badge arrives
+          // Update messages only when tokens arrive
           setMessages([...newMessages, { role: "assistant", content: assistantResponse }]);
         }
       }
@@ -171,6 +196,8 @@ export default function TriagePage() {
     setCurrentTriageLevel(null);
     setIsMentalHealth(false);
     setInputMessage("");
+    setRetrievalMeta(null);
+    setIsExplainOpen(false);
   };
 
   if (isUserLoading || !user) {
@@ -184,7 +211,8 @@ export default function TriagePage() {
     );
   }
 
-  const isEmergency = currentTriageLevel === "emergency";
+  const isEmergencyOrUrgent =
+    currentTriageLevel === "emergency" || currentTriageLevel === "urgent";
 
   return (
     <div className="w-full space-y-6 py-2">
@@ -203,7 +231,7 @@ export default function TriagePage() {
               </h1>
               <span className="text-xs text-teal-700 font-semibold flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
-                Evidence-Based WHO Clinical Protocol Context • RAG Powered
+                WHO-inspired clinical protocol Context • RAG Powered
               </span>
             </div>
           </div>
@@ -211,6 +239,18 @@ export default function TriagePage() {
 
         {/* Action Header Buttons */}
         <div className="flex items-center gap-2 self-start sm:self-center">
+          {retrievalMeta && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExplainOpen(true)}
+              className="gap-1.5 text-xs font-semibold shadow-2xs text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200"
+            >
+              <HelpCircle className="w-3.5 h-3.5 text-teal-600" />
+              <span>{isUrdu ? "وجہ جانیں" : "Why this result?"}</span>
+            </Button>
+          )}
+
           {messages.length > 0 && (
             <>
               <Button
@@ -351,10 +391,13 @@ export default function TriagePage() {
           {/* Mental Health Crisis Guardrail Banner */}
           {isMentalHealth && <CrisisGuardrailBanner />}
 
-          {/* Physical Emergency Banner */}
-          {isEmergency && !isMentalHealth && (
+          {/* FEATURE 1: Emergency Banner - Show ONLY when triage level is emergency or urgent */}
+          {isEmergencyOrUrgent && (
             <div className="animate-in fade-in slide-in-from-top-3 duration-300">
-              <EmergencyBanner />
+              <EmergencyBanner
+                level={currentTriageLevel}
+                isMentalHealth={isMentalHealth}
+              />
             </div>
           )}
 
@@ -377,14 +420,20 @@ export default function TriagePage() {
                     <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
                       {isUrdu
                         ? "اردو، انگریزی یا رومن اردو میں اپنی علامات بتائیں۔ سسٹم ڈبلیو ایچ او پروٹوکول کے مطابق خطرے کا فوری تعین کرے گا۔"
-                        : "Type in Urdu, English, or Roman Urdu. The AI cross-references WHO triage protocols with your health profile to assess urgency."}
+                        : "Type or speak in Urdu or English. The AI cross-references WHO-inspired clinical protocols with your health profile to assess urgency."}
                     </p>
                   </div>
                 </div>
               ) : (
                 <>
                   {messages.map((msg, i) => (
-                    <ChatBubble key={i} role={msg.role} content={msg.content} lang={lang} />
+                    <ChatBubble
+                      key={i}
+                      role={msg.role}
+                      content={msg.content}
+                      lang={lang}
+                      onOpenExplain={() => setIsExplainOpen(true)}
+                    />
                   ))}
 
                   {isStreaming && (
@@ -400,7 +449,7 @@ export default function TriagePage() {
               )}
             </div>
 
-            {/* Input Bar */}
+            {/* Input Bar with VoiceButton */}
             <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 shrink-0">
               <form
                 onSubmit={(e) => {
@@ -409,6 +458,14 @@ export default function TriagePage() {
                 }}
                 className="flex items-center gap-2"
               >
+                {/* FEATURE 3: Voice input button */}
+                <VoiceButton
+                  onTranscript={(spoken) => {
+                    setInputMessage((prev) => (prev ? `${prev} ${spoken}` : spoken));
+                  }}
+                  defaultLang={isUrdu ? "ur-PK" : "en-US"}
+                />
+
                 <input
                   type="text"
                   value={inputMessage}
@@ -417,6 +474,7 @@ export default function TriagePage() {
                   placeholder={t("triage_input_placeholder")}
                   className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
                 />
+
                 <Button
                   type="submit"
                   disabled={!inputMessage.trim() || isStreaming}
@@ -445,6 +503,13 @@ export default function TriagePage() {
         situation={messages.find((m) => m.role === "user")?.content || "Acute patient symptom report"}
         assessment={messages.filter((m) => m.role === "assistant").pop()?.content || "Triage evaluation"}
         triageLevel={currentTriageLevel || "Clinical Evaluation"}
+      />
+
+      {/* FEATURE 2: Explainability Modal */}
+      <ExplainabilityModal
+        isOpen={isExplainOpen}
+        onClose={() => setIsExplainOpen(false)}
+        metadata={retrievalMeta}
       />
     </div>
   );

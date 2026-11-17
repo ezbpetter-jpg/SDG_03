@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import groq, { GROQ_MODEL } from "@/lib/groq";
 import { buildSystemPrompt, PatientProfileContext } from "@/lib/memory/context_builder";
+import { retrieveDetailedContext } from "@/lib/rag/retriever";
 import db from "@/lib/db";
 
 export async function POST(req: NextRequest) {
@@ -70,6 +71,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Retrieve real RAG context & protocol metadata
+    const ragResult = retrieveDetailedContext(lastUserMsg);
+    const normalizedUserMsg = lastUserMsg.toLowerCase();
+
+    // Extract exact matched keywords from the matched protocols
+    const matchedKeywords: string[] = [];
+    for (const protocol of ragResult.matchedProtocols) {
+      for (const keyword of protocol.keywords) {
+        if (normalizedUserMsg.includes(keyword.toLowerCase()) && !matchedKeywords.includes(keyword)) {
+          matchedKeywords.push(keyword);
+        }
+      }
+    }
+
+    const parseList = (item: string[] | string | undefined | null): string[] => {
+      if (!item) return [];
+      if (Array.isArray(item)) return item;
+      try {
+        const parsed = JSON.parse(item);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+      return String(item)
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+    };
+
+    // First SSE Event: Retrieval Metadata (All values from real retriever & context_builder)
+    const retrievalMetadata = {
+      type: "meta",
+      protocols: ragResult.matchedProtocols.map((p) => ({
+        id: p.id,
+        title: p.title,
+      })),
+      matchedKeywords,
+      severity: ragResult.highestSeverity || "routine",
+      profileUsed: {
+        conditions: profile ? parseList(profile.conditions) : [],
+        allergies: profile ? parseList(profile.allergies) : [],
+      },
+    };
+
     // Assemble system prompt with RAG context and safety rules
     const { systemPrompt } = buildSystemPrompt(profile, lastUserMsg);
 
@@ -92,6 +135,9 @@ export async function POST(req: NextRequest) {
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
+          // Send retrieval metadata as the FIRST SSE event before any tokens
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(retrievalMetadata)}\n\n`));
+
           for await (const chunk of groqStream) {
             const text = chunk.choices[0]?.delta?.content || "";
             if (text) {
