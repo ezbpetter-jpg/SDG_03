@@ -1,6 +1,6 @@
-import type { Database as DatabaseType } from "better-sqlite3";
+import type { DatabaseSync } from "node:sqlite";
 
-export function initDB(db: DatabaseType) {
+export function initDB(db: DatabaseSync) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,12 +1,12 @@
-import Database, { Database as DatabaseType } from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { initDB } from "./schema";
 import path from "path";
 
 const dbPath = path.resolve(process.cwd(), "tabibcare.db");
 
-const globalForDb = global as unknown as { db?: DatabaseType };
+const globalForDb = global as unknown as { db?: DatabaseSync };
 
-export const db: DatabaseType = globalForDb.db ?? new Database(dbPath);
+export const db: DatabaseSync = globalForDb.db ?? new DatabaseSync(dbPath);
 
 if (!globalForDb.db) {
   initDB(db);
