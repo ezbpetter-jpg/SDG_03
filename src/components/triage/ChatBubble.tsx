@@ -39,11 +39,11 @@ export function ChatBubble({
   // If the message is completely empty and has no triage badge, do not render a blank avatar/circle
   if (!cleanContent.trim() && !triageLevel && !isUser) {
     return (
-      <div className="flex gap-2.5 sm:gap-3 items-center py-1">
+      <div className="flex gap-2.5 sm:gap-3 items-center py-1.5 animate-in fade-in duration-200">
         <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
           <Bot className="w-4 h-4" />
         </div>
-        <div className="flex items-center gap-2 p-3 rounded-2xl bg-white border border-slate-200 text-xs text-slate-500">
+        <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-600 shadow-2xs">
           <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
           <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare AI is preparing assessment..."}</span>
         </div>

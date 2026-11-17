@@ -116,15 +116,30 @@ export async function POST(req: NextRequest) {
     // Assemble system prompt with RAG context and safety rules
     const { systemPrompt } = buildSystemPrompt(profile, lastUserMsg);
 
+    // Sanitize and filter out any empty messages to prevent API errors
+    const sanitizedMessages = messages
+      .filter(
+        (m: { role?: string; content?: string }) =>
+          m && typeof m.content === "string" && m.content.trim().length > 0
+      )
+      .map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant" | "system",
+        content: m.content.trim(),
+      }));
+
+    if (sanitizedMessages.length === 0) {
+      sanitizedMessages.push({
+        role: "user",
+        content: lastUserMsg || "Hello",
+      });
+    }
+
     // Call Groq API with streaming
     const groqStream = await groq.chat.completions.create({
       model: GROQ_MODEL,
       messages: [
         { role: "system", content: systemPrompt },
-        ...messages.map((m: { role: string; content: string }) => ({
-          role: m.role as "user" | "assistant" | "system",
-          content: m.content,
-        })),
+        ...sanitizedMessages,
       ],
       stream: true,
       max_tokens: 800,
@@ -146,6 +161,7 @@ export async function POST(req: NextRequest) {
           }
           controller.close();
         } catch (err) {
+          console.error("Groq stream iteration error:", err);
           controller.error(err);
         }
       },

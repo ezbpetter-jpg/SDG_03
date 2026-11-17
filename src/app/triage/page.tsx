@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { ChatBubble } from "@/components/triage/ChatBubble";
@@ -57,15 +57,22 @@ export default function TriagePage() {
     }
   }, [user, isUserLoading, router]);
 
-  const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+  const scrollToBottom = useCallback((instant = false) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({
+        top: scrollContainerRef.current.scrollHeight,
+        behavior: instant ? "auto" : "smooth",
+      });
     }
-  };
+  }, []);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, isStreaming]);
+    if (isStreaming) {
+      scrollToBottom(true);
+    } else {
+      scrollToBottom(false);
+    }
+  }, [messages, isStreaming, scrollToBottom]);
 
   // Hackathon clinical scenario prompt chips
   const starterChips = [
@@ -106,6 +113,8 @@ export default function TriagePage() {
     setInputMessage("");
     setIsStreaming(true);
 
+    let assistantResponse = "";
+
     try {
       const res = await fetch("/api/triage", {
         method: "POST",
@@ -128,7 +137,6 @@ export default function TriagePage() {
       const decoder = new TextDecoder();
       let rawBuffer = "";
       let metaCaptured = false;
-      let assistantResponse = "";
 
       let done = false;
       while (!done) {
@@ -172,13 +180,15 @@ export default function TriagePage() {
             setIsMentalHealth(true);
           }
 
-          // Update messages only when tokens arrive
-          setMessages([...newMessages, { role: "assistant", content: assistantResponse }]);
+          // Update messages only when tokens actually arrive
+          if (assistantResponse.trim()) {
+            setMessages([...newMessages, { role: "assistant", content: assistantResponse }]);
+          }
         }
       }
     } catch {
       setMessages((prev) => [
-        ...prev,
+        ...prev.filter((m) => m.content.trim().length > 0),
         {
           role: "assistant",
           content: isUrdu
@@ -188,6 +198,19 @@ export default function TriagePage() {
       ]);
     } finally {
       setIsStreaming(false);
+      // Ensure if the stream completed with empty response, provide a safe fallback
+      if (!assistantResponse.trim()) {
+        setMessages((prev) => [
+          ...prev.filter((m) => m.content.trim().length > 0),
+          {
+            role: "assistant",
+            content: isUrdu
+              ? "TRIAGE_LEVEL: emergency\n\nاگر آپ کسی ہنگامی یا شدید ذہنی دباؤ کی صورتحال میں ہیں، تو براہِ کرم فوری طور پر ریسکیو 1122 یا امنگ ہیلپ لائن (0317-4288665) پر رابطہ کریں۔ آپ اکیلے نہیں ہیں۔"
+              : "TRIAGE_LEVEL: emergency\n\nIf you are experiencing a medical or mental health emergency, please immediately call Rescue 1122 or the Umang Helpline at 0317-4288665. You are not alone and help is available.",
+          },
+        ]);
+        setCurrentTriageLevel("emergency");
+      }
     }
   };
 
@@ -388,25 +411,26 @@ export default function TriagePage() {
 
         {/* Right Live Triage Chat Area (8 Columns on Desktop) */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Mental Health Crisis Guardrail Banner */}
-          {isMentalHealth && <CrisisGuardrailBanner />}
-
-          {/* FEATURE 1: Emergency Banner - Show ONLY when triage level is emergency or urgent */}
-          {isEmergencyOrUrgent && (
+          {/* FEATURE 1 & Safety Guardrail: Emergency / Urgent / Mental Health Banner */}
+          {isEmergencyOrUrgent ? (
             <div className="animate-in fade-in slide-in-from-top-3 duration-300">
               <EmergencyBanner
                 level={currentTriageLevel}
                 isMentalHealth={isMentalHealth}
               />
             </div>
-          )}
+          ) : isMentalHealth ? (
+            <div className="animate-in fade-in slide-in-from-top-3 duration-300">
+              <CrisisGuardrailBanner />
+            </div>
+          ) : null}
 
           {/* Chat Window Container */}
-          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[72vh] min-h-[520px] max-h-[800px] overflow-hidden">
-            {/* Messages Scroll Area with proper bottom padding */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[68vh] min-h-[480px] max-h-[750px] overflow-hidden">
+            {/* Messages Scroll Area with guaranteed bottom clearance */}
             <div
               ref={scrollContainerRef}
-              className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40 pb-16"
+              className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40"
             >
               {messages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-4 max-w-lg mx-auto">
@@ -443,8 +467,9 @@ export default function TriagePage() {
                     </div>
                   )}
 
-                  {/* Ref target with safe space */}
-                  <div ref={messagesEndRef} className="h-6" />
+                  {/* Guaranteed clearance space above the input bar */}
+                  <div className="h-14 shrink-0 pointer-events-none" aria-hidden="true" />
+                  <div ref={messagesEndRef} className="h-1 shrink-0" />
                 </>
               )}
             </div>
