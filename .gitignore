@@ -6,6 +6,10 @@ docs/
 .env.local
 *.env
 
+# SQLite database (auto-created at runtime — never commit)
+*.db
+tabibcare.db
+
 # Dependencies
 node_modules/
 __pycache__/
