@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { UserProvider } from "@/context/UserContext";
 import { Navbar } from "@/components/layout/Navbar";
-import { MedicalDisclaimerFooter } from "@/components/layout/MedicalDisclaimer";
+import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,13 +17,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900">
+      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900 overflow-x-hidden">
         <UserProvider>
           <Navbar />
-          <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-6">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
             {children}
           </main>
-          <MedicalDisclaimerFooter />
+          <Footer />
         </UserProvider>
       </body>
     </html>

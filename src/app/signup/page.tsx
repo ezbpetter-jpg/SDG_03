@@ -7,11 +7,13 @@ import { useUser } from "@/context/UserContext";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { HeartPulse, UserPlus, Sparkles } from "lucide-react";
+import { HeartPulse, UserPlus, Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import clsx from "clsx";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { login } = useUser();
+  const { login, lang, t } = useUser();
+  const isUrdu = lang === "ur";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -25,12 +27,12 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
 
   const conditionOptions = [
-    "Type 2 Diabetes",
-    "Hypertension (High BP)",
-    "Asthma / Respiratory",
-    "Ischemic Heart Disease",
-    "Chronic Kidney Disease",
-    "Hyperlipidemia (High Cholesterol)",
+    { label: "Type 2 Diabetes", labelUrdu: "شوگر (ذیابیطس)" },
+    { label: "Hypertension (High BP)", labelUrdu: "ہائی بلڈ پریشر" },
+    { label: "Asthma / Respiratory", labelUrdu: "دمہ / سانس کا مسئلہ" },
+    { label: "Ischemic Heart Disease", labelUrdu: "دل کا عارضہ" },
+    { label: "Chronic Kidney Disease", labelUrdu: "گردے کا مسئلہ" },
+    { label: "High Cholesterol", labelUrdu: "کولیسٹرول" },
   ];
 
   const toggleCondition = (cond: string) => {
@@ -42,7 +44,7 @@ export default function SignupPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password) {
-      setError("Please fill in all required account fields");
+      setError(isUrdu ? "براہ کرم بنیادی اکاؤنٹ کی معلومات مکمل کریں" : "Please fill in all required account fields");
       return;
     }
 
@@ -85,180 +87,182 @@ export default function SignupPage() {
         });
         router.push("/dashboard");
       } else {
-        setError(data.error || "Failed to create account");
+        setError(data.error || (isUrdu ? "اکاؤنٹ بنانے میں مسئلہ پیش آیا" : "Failed to create account"));
       }
     } catch {
-      setError("An unexpected network error occurred");
+      setError(isUrdu ? "نیٹ ورک میں خرابی پیش آئی ہے" : "An unexpected network error occurred");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mx-auto py-6">
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader className="text-center pb-3">
+    <div className="max-w-2xl w-full mx-auto py-6 sm:py-10">
+      <Card className="rounded-3xl border-slate-200 shadow-sm overflow-hidden">
+        <CardHeader className="text-center pb-4 pt-6 sm:pt-8 bg-slate-50/50 border-b border-slate-100">
           <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center mx-auto mb-2 shadow-xs">
-            <HeartPulse className="w-6 h-6" />
+            <UserPlus className="w-6 h-6" />
           </div>
           <CardTitle className="text-xl font-bold text-slate-900">
-            Create Your TabeebCare Profile
+            {isUrdu ? "طبیب کیئر میں نیا اکاؤنٹ بنائیں" : "Create TabeebCare Account"}
           </CardTitle>
-          <CardDescription>
-            نیا ہیلتھ اکاؤنٹ بنائیں اور محفوظ ڈیجیٹل ریکارڈ حاصل کریں
+          <CardDescription className="text-xs text-slate-500">
+            {isUrdu
+              ? "ذاتی ہیلتھ پروفائل اور AI کلینیکل ٹریآج کے لیے رجسٹریشن"
+              : "Register your patient profile for safe, personalized triage and prescription checks."}
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-lg leading-relaxed">
-                {error}
-              </div>
-            )}
-
+        <CardContent className="p-6 sm:p-8 space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6">
             {/* Account Credentials */}
             <div className="space-y-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-800 block border-b border-slate-100 pb-1">
-                1. Account Credentials (بنیادی معلومات)
-              </span>
-
-              <Input
-                label="Full Name *"
-                type="text"
-                placeholder="e.g. Fatima Tariq"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isUrdu ? "1. اکاؤنٹ کی معلومات" : "1. Account Credentials"}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Input
-                  label="Email Address *"
-                  type="email"
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  label={isUrdu ? "مکمل نام" : "Full Name"}
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Fatima Ali"
                   required
                 />
                 <Input
-                  label="Password *"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  label={isUrdu ? "ای میل ایڈریس" : "Email Address"}
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="patient@example.com"
                   required
                 />
               </div>
+              <Input
+                label={isUrdu ? "پاس ورڈ" : "Password"}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+              />
             </div>
 
-            {/* Health Onboarding */}
-            <div className="space-y-3 pt-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-800 block border-b border-slate-100 pb-1">
-                2. Health Profile & Long-Term Memory (صحت کا ریکارڈ)
-              </span>
-
-              <div className="grid grid-cols-2 gap-3">
+            {/* Demographics */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isUrdu ? "2. بنیادی معلومات" : "2. Demographics"}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <Input
-                  label="Age"
+                  label={isUrdu ? "عمر (سال)" : "Age (Years)"}
                   type="number"
-                  placeholder="e.g. 45"
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
                   min="1"
                   max="120"
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  placeholder="e.g. 45"
                 />
-
                 <div className="space-y-1">
                   <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                    Gender
+                    {isUrdu ? "جنس" : "Gender"}
                   </label>
                   <select
                     value={gender}
                     onChange={(e) => setGender(e.target.value)}
-                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+                    className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
                   >
-                    <option value="Male">Male (مرد)</option>
-                    <option value="Female">Female (خاتون)</option>
-                    <option value="Other">Other</option>
+                    <option value="Male">{isUrdu ? "مرد (Male)" : "Male"}</option>
+                    <option value="Female">{isUrdu ? "عورت (Female)" : "Female"}</option>
+                    <option value="Other">{isUrdu ? "دیگر (Other)" : "Other"}</option>
                   </select>
                 </div>
               </div>
+            </div>
 
-              {/* Conditions Checkboxes */}
-              <div className="space-y-1.5 pt-1">
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  Chronic Conditions (دائمی امراض)
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {conditionOptions.map((cond) => {
-                    const isChecked = conditions.includes(cond);
-                    return (
-                      <button
-                        type="button"
-                        key={cond}
-                        onClick={() => toggleCondition(cond)}
-                        className={`text-left text-xs p-2.5 rounded-lg border transition-colors flex items-center justify-between ${
-                          isChecked
-                            ? "bg-teal-50 border-teal-300 text-teal-800 font-semibold"
-                            : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span>{cond}</span>
-                        {isChecked && (
-                          <span className="w-2 h-2 rounded-full bg-teal-600" />
+            {/* Chronic Conditions */}
+            <div className="space-y-2 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isUrdu ? "3. دائمی بیماریاں (اختیاری)" : "3. Chronic Conditions (Select all that apply)"}
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {conditionOptions.map((c, i) => {
+                  const isSelected = conditions.includes(c.label);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => toggleCondition(c.label)}
+                      className={clsx(
+                        "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium transition-all text-left",
+                        isSelected
+                          ? "bg-teal-50 border-teal-400 text-teal-900 font-bold shadow-2xs"
+                          : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <div
+                        className={clsx(
+                          "w-4 h-4 rounded-md border flex items-center justify-center shrink-0",
+                          isSelected
+                            ? "bg-teal-600 border-teal-600 text-white"
+                            : "border-slate-300 bg-white"
                         )}
-                      </button>
-                    );
-                  })}
-                </div>
+                      >
+                        {isSelected && <CheckCircle2 className="w-3.5 h-3.5" />}
+                      </div>
+                      <span>{isUrdu ? c.labelUrdu : c.label}</span>
+                    </button>
+                  );
+                })}
               </div>
+            </div>
 
-              {/* Allergies & Current Meds */}
+            {/* Allergies & Medications */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {isUrdu ? "4. الرجیز اور موجودہ ادویات" : "4. Allergies & Daily Medications"}
+              </h4>
               <Input
-                label="Known Drug or Food Allergies"
+                label={isUrdu ? "معلوم الرجیز (کوما سے الگ کریں)" : "Known Allergies (comma separated)"}
                 type="text"
-                placeholder="e.g. Penicillin, Sulfa, Peanuts (comma-separated)"
                 value={allergies}
                 onChange={(e) => setAllergies(e.target.value)}
-                helperText="Crucial for preventing adverse drug-allergy clashes"
+                placeholder="e.g. Penicillin, Sulfa, Aspirin"
               />
-
               <Input
-                label="Current Active Prescriptions"
+                label={isUrdu ? "موجودہ ادویات (کوما سے الگ کریں)" : "Current Medications (comma separated)"}
                 type="text"
-                placeholder="e.g. Glucophage 500mg, Panadol (comma-separated)"
                 value={medications}
                 onChange={(e) => setMedications(e.target.value)}
+                placeholder="e.g. Metformin 500mg, Panadol"
               />
             </div>
+
+            {error && (
+              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <Button
               type="submit"
               variant="primary"
+              size="lg"
               isLoading={isLoading}
-              className="w-full mt-4"
+              className="w-full font-bold gap-2 shadow-sm"
             >
-              <UserPlus className="w-4 h-4 mr-1.5" />
-              Complete Registration & Enter (اکاؤنٹ مکمل کریں)
+              <UserPlus className="w-4 h-4" />
+              <span>{isUrdu ? "اکاؤنٹ رجسٹر کریں" : "Complete Registration"}</span>
             </Button>
           </form>
 
-          <div className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100 flex items-center justify-between">
-            <Link
-              href="/login"
-              className="font-semibold text-teal-600 hover:text-teal-700 hover:underline"
-            >
-              Already have an account? Sign In
+          <p className="text-center text-xs text-slate-500 pt-2 border-t border-slate-100">
+            {isUrdu ? "پہلے سے اکاؤنٹ موجود ہے؟ " : "Already have an account? "}
+            <Link href="/login" className="text-teal-700 font-bold hover:underline">
+              {isUrdu ? "لاگ ان کریں" : "Sign In"}
             </Link>
-            <Link
-              href="/login?demo=true"
-              className="flex items-center gap-1 font-semibold text-teal-700 bg-teal-50 px-2 py-1 rounded"
-            >
-              <Sparkles className="w-3 h-3" />
-              Judge Demo Mode
-            </Link>
-          </div>
+          </p>
         </CardContent>
       </Card>
     </div>

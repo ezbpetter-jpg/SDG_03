@@ -7,12 +7,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/Button";
 import { MedicineCard, MedicineData } from "@/components/meds/MedicineCard";
 import { MedicalDisclaimerModal } from "@/components/layout/MedicalDisclaimer";
-import { Pill, Sparkles, AlertCircle, CheckCircle, Search, Clock } from "lucide-react";
+import { Pill, Sparkles, AlertCircle, CheckCircle, Search, Clock, Info, ShieldAlert } from "lucide-react";
 
 export default function MedsPage() {
   const router = useRouter();
-  const { user, profile, isLoading: isUserLoading, lang } = useUser();
-
+  const { user, profile, isLoading: isUserLoading, lang, t } = useUser();
   const isUrdu = lang === "ur";
 
   const [inputMeds, setInputMeds] = useState("");
@@ -33,17 +32,18 @@ export default function MedsPage() {
   const presets = [
     {
       title: "Diabetes Prescription",
-      titleUrdu: "شوگر نسخہ",
+      titleUrdu: "شوگر کا نسخہ",
       value: "Metformin 500mg, Glibenclamide 5mg, Aspirin 75mg",
     },
     {
       title: "Antibiotic Course",
-      titleUrdu: "اینٹی بائیوٹک کورس",
+      titleUrdu: "اینٹی بائیوٹک نسخہ (الرجی ٹیسٹ)",
       value: "Augmentin 625mg, Panadol 500mg",
+      highlight: true,
     },
     {
       title: "Blood Pressure",
-      titleUrdu: "بلڈ پریشر نسخہ",
+      titleUrdu: "بلڈ پریشر کا نسخہ",
       value: "Amlodipine 5mg, Losartan 50mg, Hydrochlorothiazide 25mg",
     },
   ];
@@ -56,7 +56,7 @@ export default function MedsPage() {
   const handleAnalyze = async (medsToTest?: string) => {
     const text = medsToTest || inputMeds;
     if (!text.trim()) {
-      setError("Please enter at least one medication name");
+      setError(isUrdu ? "براہ کرم کم از کم ایک دوا کا نام درج کریں" : "Please enter at least one medication name");
       return;
     }
 
@@ -76,137 +76,172 @@ export default function MedsPage() {
       if (res.ok && data.data) {
         setMedData(data.data);
       } else {
-        setError(data.error || "Failed to analyze medications");
+        setError(data.error || (isUrdu ? "تجزیہ مکمل نہ ہو سکا" : "Failed to analyze medications"));
       }
     } catch {
-      setError("Network error while connecting to Groq medication parser");
+      setError(
+        isUrdu
+          ? "سرور سے رابطہ قائم نہ ہو سکا، براہ کرم دوبارہ کوشش کریں"
+          : "Network error while connecting to Groq medication parser"
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   if (isUserLoading || !user) {
-    return <div className="text-center py-20 text-slate-400 text-sm">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-slate-400 text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <span>{isUrdu ? "لوڈ ہو رہا ہے..." : "Loading prescription scanner..."}</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6 py-2">
+    <div className="space-y-8 py-2 max-w-5xl mx-auto">
       <MedicalDisclaimerModal featureKey="meds" />
 
       {/* Header */}
-      <div className="space-y-1">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center">
-            <Pill className="w-5 h-5" />
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <Pill className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
-              {isUrdu ? "نسخہ و ادویات ڈیمسٹیفائر" : "Medicine Demystifier & Routine Guide"}
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {t("meds_title")}
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500">
-              {isUrdu
-                ? "اپنی دواؤں کے نام درج کریں، اور 24 گھنٹے کا تصویری شیڈول اور غذائی ہدایات حاصل کریں۔"
-                : "Enter prescribed medicines to receive clear dosage timings, food precautions, and allergy conflict checks."}
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+              طبیب کیئر نسخہ ڈیکوڈر اور الرجی انتباہ • SDG 3
             </p>
           </div>
         </div>
+        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-3xl">
+          {t("meds_subtitle")}
+        </p>
       </div>
 
-      {/* Quick Fill Presets */}
-      <div className="space-y-2">
-        <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-          {isUrdu ? "فوری ٹیسٹ کے لیے نمونہ نسخے (1-Click Presets):" : "1-Click Presets for Fast Evaluation:"}
-        </span>
-        <div className="flex flex-wrap gap-2">
-          {presets.map((p, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => handlePreset(p.value)}
-              className="text-xs px-3 py-1.5 rounded-lg border border-teal-200 bg-teal-50/70 hover:bg-teal-100 text-teal-800 font-medium transition-colors shadow-2xs"
-            >
-              {isUrdu ? p.titleUrdu : p.title}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Input Card */}
+      <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+        <CardHeader className="bg-slate-50/70 p-5 sm:p-6 border-b border-slate-100">
+          <div className="space-y-1">
+            <CardTitle className="text-base sm:text-lg font-bold text-slate-800">
+              {t("meds_input_label")}
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              {isUrdu
+                ? "ڈاکٹر کے نسخے سے دوا کا نام اور ملی گرام (mg) درج کریں، مثلاً Augmentin 625mg, Panadol 500mg"
+                : "Type medicine names separated by commas, or click one of the quick test presets below."}
+            </CardDescription>
+          </div>
+        </CardHeader>
 
-      {/* Input Section */}
-      <Card>
-        <CardContent className="p-5 space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-              {isUrdu ? "نسخے کی ادویات کے نام درج کریں" : "Enter Medicine Names"}
-            </label>
+        <CardContent className="p-5 sm:p-6 space-y-5">
+          {/* Quick Presets */}
+          <div className="space-y-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+              {t("meds_presets_label")}
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {presets.map((preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => handlePreset(preset.value)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-200 bg-white hover:bg-teal-50 hover:border-teal-300 hover:text-teal-800 transition-all shadow-2xs active:scale-95"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600" />
+                  <span>{isUrdu ? preset.titleUrdu : preset.title}</span>
+                  {preset.highlight && (
+                    <span className="text-[10px] bg-red-100 text-red-700 font-bold px-1.5 py-0.2 rounded">
+                      Allergy Check
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Textarea Input */}
+          <div className="space-y-2">
             <textarea
               rows={3}
               value={inputMeds}
               onChange={(e) => setInputMeds(e.target.value)}
-              placeholder="e.g. Augmentin 625mg, Panadol 500mg, Glucophage 500mg, or Bactrim DS"
-              className="w-full rounded-xl border border-slate-200 p-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+              placeholder={t("meds_input_placeholder")}
+              className="w-full rounded-xl border border-slate-200 p-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors leading-relaxed"
             />
           </div>
 
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-lg flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-1">
+          {/* Action Button */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
             <span className="text-xs text-slate-400">
-              Cross-checked with your recorded allergies:{" "}
-              <strong className="text-slate-600 font-semibold">
-                {profile?.allergies?.length ? profile.allergies.join(", ") : "None recorded"}
-              </strong>
+              {isUrdu
+                ? "آپ کی پروفائل الرجیز کے ساتھ خودکار چیک کیا جائے گا"
+                : "Automatically checked against your recorded allergies"}
             </span>
+
             <Button
               onClick={() => handleAnalyze()}
               isLoading={isLoading}
-              variant="primary"
+              size="lg"
+              className="w-full sm:w-auto font-bold gap-2 shadow-sm"
             >
-              <Search className="w-4 h-4 mr-1.5" />
-              {isUrdu ? "ادویات کا تجزیہ کریں" : "Analyze & Build Schedule"}
+              <Search className="w-4 h-4" />
+              <span>{isLoading ? t("meds_btn_analyzing") : t("meds_btn_analyze")}</span>
             </Button>
           </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+              <span>{error}</span>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Output Results */}
+      {/* Results Section */}
       {medData && (
-        <div className="space-y-5 animate-in fade-in duration-300">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <h2 className="text-base font-bold text-slate-800 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-teal-600" />
-              {isUrdu ? "تجزیہ شدہ ادویات کا شیڈول" : "Generated Medication Schedule"}
-            </h2>
-            <span className="text-xs text-slate-500">
-              {medData.medications.length} medication(s) evaluated
+        <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-teal-600" />
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+                {t("meds_results_title")}
+              </h2>
+            </div>
+            <span className="text-xs text-slate-400 font-mono">
+              {medData.medications.length} {isUrdu ? "ادویات" : "Medication(s)"}
             </span>
           </div>
 
-          {/* Cards per medication */}
-          <div className="space-y-4">
+          {/* Medications Cards Stack */}
+          <div className="space-y-5">
             {medData.medications.map((med, idx) => (
               <MedicineCard key={idx} med={med} lang={lang} />
             ))}
           </div>
 
-          {/* General Advice */}
-          {(medData.general_advice || medData.general_advice_urdu) && (
-            <div className="bg-teal-50/60 border border-teal-200 rounded-2xl p-4 text-xs text-teal-900 space-y-1">
-              <strong className="font-bold flex items-center gap-1.5 text-teal-800">
-                <CheckCircle className="w-4 h-4 text-teal-600" />
-                {isUrdu ? "عمومی طبی مشورہ و احتیاط" : "General Clinical Advice"}
-              </strong>
-              <p className="leading-relaxed">
-                {isUrdu && medData.general_advice_urdu ? medData.general_advice_urdu : medData.general_advice}
+          {/* General Physician Advice */}
+          {medData.general_advice && (
+            <div className="p-5 rounded-2xl bg-teal-50/70 border border-teal-200 text-teal-900 space-y-2">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <Info className="w-4 h-4 text-teal-700 shrink-0" />
+                <span>{isUrdu ? "عمومی طبی مشورہ و ہدایات" : "Clinical Pharmacist Guidance"}</span>
+              </div>
+              <p className="text-xs sm:text-sm text-teal-950 leading-relaxed">
+                {isUrdu && medData.general_advice_urdu
+                  ? medData.general_advice_urdu
+                  : medData.general_advice}
               </p>
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   );

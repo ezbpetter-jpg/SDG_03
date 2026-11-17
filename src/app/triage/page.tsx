@@ -8,7 +8,16 @@ import { EmergencyBanner } from "@/components/triage/EmergencyBanner";
 import { SbarCard } from "@/components/triage/SbarCard";
 import { MedicalDisclaimerModal } from "@/components/layout/MedicalDisclaimer";
 import { Button } from "@/components/ui/Button";
-import { MessageSquareHeart, Send, Sparkles, FileText, RotateCcw, AlertOctagon } from "lucide-react";
+import {
+  MessageSquareHeart,
+  Send,
+  Sparkles,
+  FileText,
+  RotateCcw,
+  AlertOctagon,
+  Bot,
+  Activity,
+} from "lucide-react";
 
 interface Message {
   role: "user" | "assistant" | "system";
@@ -17,8 +26,7 @@ interface Message {
 
 export default function TriagePage() {
   const router = useRouter();
-  const { user, profile, isLoading: isUserLoading, lang } = useUser();
-
+  const { user, profile, isLoading: isUserLoading, lang, t } = useUser();
   const isUrdu = lang === "ur";
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -44,18 +52,19 @@ export default function TriagePage() {
     scrollToBottom();
   }, [messages, isStreaming]);
 
-  // Starter prompt chips
+  // Hackathon starter scenario prompt chips
   const starterChips = [
     {
-      label: "Tez Bukhar (2 days)",
+      label: isUrdu ? "تیز بخار اور سردی" : "Tez Bukhar (2 days)",
       value: "Mujhe 2 din se tez bukhar hai aur thand lag rahi hai.",
     },
     {
-      label: "Chest Pain & Breathing",
+      label: isUrdu ? "سینے میں شدید درد" : "Chest Pain & Breathing (Emergency)",
       value: "I have sudden crushing chest pain radiating to left arm and shortness of breath.",
+      isEmergency: true,
     },
     {
-      label: "Pediatric Vomiting",
+      label: isUrdu ? "بچے کو الٹی اور دست" : "Pediatric Vomiting & Diarrhea",
       value: "Mere bacha ko 2 din se ulti aur dast ho rahe hain aur wo sust hai.",
     },
   ];
@@ -99,60 +108,38 @@ export default function TriagePage() {
       }
 
       const reader = res.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let fullAssistantResponse = "";
+      const decoder = new TextDecoder();
+      let assistantResponse = "";
 
       // Add placeholder assistant message
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      setMessages([...newMessages, { role: "assistant", content: "" }]);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      let done = false;
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          const chunk = decoder.decode(value, { stream: true });
+          assistantResponse += chunk;
 
-        const chunk = decoder.decode(value, { stream: true });
-        fullAssistantResponse += chunk;
-
-        // Extract triage level if detected in the stream
-        const levelMatch = fullAssistantResponse.match(/^TRIAGE_LEVEL:\s*(\w+)/i);
-        if (levelMatch) {
-          const detected = levelMatch[1].toLowerCase();
-          setCurrentTriageLevel(detected);
-        }
-
-        setMessages((prev) => {
-          const updated = [...prev];
-          const lastIndex = updated.length - 1;
-          if (lastIndex >= 0 && updated[lastIndex].role === "assistant") {
-            updated[lastIndex] = {
-              role: "assistant",
-              content: fullAssistantResponse,
-            };
+          // Detect TRIAGE_LEVEL: emergency from stream
+          const match = assistantResponse.match(/TRIAGE_LEVEL:\s*(\w+)/i);
+          if (match) {
+            const lvl = match[1].toLowerCase();
+            setCurrentTriageLevel(lvl);
           }
-          return updated;
-        });
-      }
 
-      // Auto-save session to SQLite
-      if (user?.id) {
-        fetch("/api/triage", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [...newMessages, { role: "assistant", content: fullAssistantResponse }],
-            userId: user.id,
-            saveSession: true,
-            triageLevel: currentTriageLevel,
-          }),
-        }).catch((err) => console.error("Session auto-save err:", err));
+          setMessages([...newMessages, { role: "assistant", content: assistantResponse }]);
+        }
       }
-    } catch (err: unknown) {
-      console.error("Triage stream error:", err);
-      const errMsg = err instanceof Error ? err.message : "Error streaming triage advice";
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: `⚠️ System Notice: Unable to complete message stream. ${errMsg}. Please consult emergency services 1122 if experiencing critical symptoms.`,
+          content: isUrdu
+            ? "⚠️ نیٹ ورک میں رکاوٹ آئی ہے۔ اگر یہ ہنگامی صورتحال ہے تو براہ کرم فوری طور پر 1122 پر کال کریں۔"
+            : "⚠️ Network connectivity issue. If this is an emergency, please dial 1122 immediately.",
         },
       ]);
     } finally {
@@ -164,21 +151,169 @@ export default function TriagePage() {
     setMessages([]);
     setCurrentTriageLevel(null);
     setIsMentalHealth(false);
+    setInputMessage("");
   };
 
   if (isUserLoading || !user) {
-    return <div className="text-center py-20 text-slate-400 text-sm">Loading triage...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-slate-400 text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <span>{isUrdu ? "ٹریآج سروس لوڈ ہو رہی ہے..." : "Loading triage session..."}</span>
+        </div>
+      </div>
+    );
   }
 
-  // Derive situation and assessment for SBAR
-  const lastUserQuestion = [...messages].reverse().find((m) => m.role === "user")?.content || "";
-  const lastAssistantAnswer = [...messages].reverse().find((m) => m.role === "assistant")?.content || "";
+  const isEmergency = currentTriageLevel === "emergency";
 
   return (
-    <div className="space-y-4 py-2">
+    <div className="space-y-6 py-2 max-w-5xl mx-auto">
       <MedicalDisclaimerModal featureKey="triage" />
 
-      {/* SBAR Doctor Handover Modal */}
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
+              <MessageSquareHeart className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                {t("triage_title")}
+              </h1>
+              <span className="text-xs text-teal-700 font-semibold">
+                WHO Clinical Protocol Context • RAG Evaluator
+              </span>
+            </div>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
+            {t("triage_subtitle")}
+          </p>
+        </div>
+
+        {/* Action Header Buttons */}
+        <div className="flex items-center gap-2 self-start sm:self-center">
+          {messages.length > 0 && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSbarOpen(true)}
+                className="gap-1.5 text-xs font-semibold shadow-2xs"
+              >
+                <FileText className="w-3.5 h-3.5 text-teal-600" />
+                <span>{isUrdu ? "ڈاکٹر کارڈ (SBAR)" : "SBAR Summary"}</span>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReset}
+                className="gap-1 text-xs text-slate-500 hover:text-slate-800"
+                title={t("triage_btn_reset")}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>{t("triage_btn_reset")}</span>
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Emergency Alert Banner (Critical Escalation) */}
+      {isEmergency && (
+        <div className="animate-in fade-in slide-in-from-top-3 duration-300">
+          <EmergencyBanner isMentalHealth={isMentalHealth} />
+        </div>
+      )}
+
+      {/* Chat Container Box */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[65vh] min-h-[480px] max-h-[750px] overflow-hidden">
+        {/* Messages Stream Area */}
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-4 max-w-lg mx-auto">
+              <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shadow-xs">
+                <Bot className="w-7 h-7" />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-base font-bold text-slate-800">
+                  {isUrdu ? "طبیب کیئر سے اپنی علامات شیئر کریں" : "Describe Your Symptoms"}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                  {isUrdu
+                    ? "اردو، انگریزی یا رومن اردو میں اپنی علامات بتائیں۔ سسٹم ڈبلیو ایچ او پروٹوکول کے مطابق خطرے کا فوری تعین کرے گا۔"
+                    : "Type in Urdu, English, or Roman Urdu. The AI cross-references WHO triage protocols with your health profile to assess urgency."}
+                </p>
+              </div>
+
+              {/* Starter Chips */}
+              <div className="w-full space-y-2 pt-2">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
+                  {t("triage_starter_label")}
+                </span>
+                <div className="flex flex-col gap-2">
+                  {starterChips.map((chip, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSendMessage(chip.value)}
+                      className="text-left p-3 rounded-xl border border-slate-200 bg-white hover:bg-teal-50 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition-all shadow-2xs flex items-center justify-between group active:scale-98"
+                    >
+                      <span className="font-semibold">{chip.label}</span>
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600 group-hover:scale-110 transition-transform" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg, i) => (
+                <ChatBubble key={i} role={msg.role} content={msg.content} lang={lang} />
+              ))}
+
+              {isStreaming && (
+                <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold p-2">
+                  <div className="w-2 h-2 rounded-full bg-teal-600 animate-ping" />
+                  <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare is analyzing symptoms..."}</span>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </>
+          )}
+        </div>
+
+        {/* Input Bar */}
+        <div className="p-3 sm:p-4 bg-white border-t border-slate-200">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSendMessage();
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              disabled={isStreaming}
+              placeholder={t("triage_input_placeholder")}
+              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
+            />
+            <Button
+              type="submit"
+              disabled={!inputMessage.trim() || isStreaming}
+              isLoading={isStreaming}
+              className="px-4 sm:px-6 py-3 font-bold gap-1.5 shadow-sm"
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">{t("triage_btn_send")}</span>
+            </Button>
+          </form>
+        </div>
+      </div>
+
+      {/* SBAR Card Modal */}
       <SbarCard
         isOpen={isSbarOpen}
         onClose={() => setIsSbarOpen(false)}
@@ -188,134 +323,10 @@ export default function TriagePage() {
         conditions={profile?.conditions}
         allergies={profile?.allergies}
         medications={profile?.current_medications}
-        situation={lastUserQuestion || "Patient entered clinical consultation chat."}
-        assessment={lastAssistantAnswer.replace(/^TRIAGE_LEVEL:\s*\w+\s*/i, "").slice(0, 400)}
+        situation={messages.find((m) => m.role === "user")?.content || "Acute patient symptom report"}
+        assessment={messages.filter((m) => m.role === "assistant").pop()?.content || "Triage evaluation"}
         triageLevel={currentTriageLevel || "Clinical Evaluation"}
       />
-
-      {/* Emergency Alert Banner (Shown at top when emergency level detected) */}
-      {currentTriageLevel === "emergency" && (
-        <EmergencyBanner isMentalHealth={isMentalHealth} />
-      )}
-
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0">
-            <MessageSquareHeart className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-slate-900 leading-tight">
-              {isUrdu ? "علامات ٹریآج و ایمرجنسی چیکر" : "Clinical Symptom Triage & Red-Flag Checker"}
-            </h1>
-            <p className="text-xs text-slate-500">
-              {isUrdu
-                ? "عالمی ادارہ صحت (WHO) کے پروٹوکولز کے ساتھ فوری رہنمائی"
-                : "Multilingual WHO & Emergency Severity Index (ESI) protocol-guided intake"}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {messages.length > 0 && (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSbarOpen(true)}
-                className="text-sky-700 bg-sky-50/60 border-sky-200 hover:bg-sky-100"
-              >
-                <FileText className="w-3.5 h-3.5 mr-1" />
-                {isUrdu ? "ڈاکٹر کارڈ (SBAR)" : "Doctor Card"}
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleReset} title="Reset Chat">
-                <RotateCcw className="w-3.5 h-3.5" />
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Starter Prompt Chips (Shown when no messages yet) */}
-      {messages.length === 0 && (
-        <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-3 shadow-xs">
-          <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
-            <Sparkles className="w-4 h-4 text-amber-500" />
-            <span>Click to test sample clinical scenarios:</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            {starterChips.map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => handleSendMessage(chip.value)}
-                className="text-left p-3 rounded-xl border border-slate-200 hover:border-teal-300 hover:bg-teal-50/50 transition-all text-xs space-y-1 shadow-2xs group"
-              >
-                <strong className="block text-slate-800 font-semibold group-hover:text-teal-700">
-                  {chip.label}
-                </strong>
-                <p className="text-slate-500 text-[11px] line-clamp-2">
-                  &ldquo;{chip.value}&rdquo;
-                </p>
-              </button>
-            ))}
-          </div>
-          <p className="text-[11px] text-slate-400">
-            💡 Or type freely in Urdu (اردو), Roman Urdu (&ldquo;Mujhe dard ho raha hai&rdquo;), or English below.
-          </p>
-        </div>
-      )}
-
-      {/* Chat Messages Box */}
-      <div className="bg-slate-100/50 border border-slate-200 rounded-2xl p-4 sm:p-5 min-h-[380px] max-h-[520px] overflow-y-auto space-y-4">
-        {messages.map((msg, index) => (
-          <ChatBubble
-            key={index}
-            role={msg.role}
-            content={msg.content}
-            lang={lang}
-          />
-        ))}
-
-        {isStreaming && (
-          <div className="flex items-center gap-2 text-xs text-slate-400 pl-11">
-            <div className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
-            <span>TabeebCare AI is reviewing clinical protocols...</span>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Box */}
-      <div className="flex gap-2">
-        <textarea
-          rows={2}
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              handleSendMessage();
-            }
-          }}
-          placeholder={
-            isUrdu
-              ? "اپنی علامات یہاں لکھیں (اردو، رومن اردو یا انگریزی)..."
-              : "Describe your symptoms (e.g. fever duration, pain location, onset)..."
-          }
-          className="flex-1 rounded-xl border border-slate-200 p-3 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 resize-none bg-white shadow-xs"
-        />
-        <Button
-          onClick={() => handleSendMessage()}
-          isLoading={isStreaming}
-          disabled={!inputMessage.trim() || isStreaming}
-          variant="primary"
-          className="px-5 shrink-0 self-end h-[52px]"
-        >
-          <Send className="w-4 h-4" />
-        </Button>
-      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { Language, translations, TranslationDictionary } from "@/lib/i18n/translations";
 
 export interface User {
   id: number;
@@ -22,8 +23,9 @@ interface UserContextType {
   user: User | null;
   profile: HealthProfile | null;
   isLoading: boolean;
-  lang: "en" | "ur";
-  setLang: (lang: "en" | "ur") => void;
+  lang: Language;
+  setLang: (lang: Language) => void;
+  t: (key: keyof TranslationDictionary) => string;
   login: (user: User, profile?: HealthProfile) => void;
   logout: () => void;
   refreshProfile: () => Promise<void>;
@@ -33,19 +35,42 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 const LOCAL_STORAGE_KEY = "tabibcare_user";
+const LANG_STORAGE_KEY = "tabibcare_lang";
 
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<HealthProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [lang, setLangState] = useState<"en" | "ur">("en");
+  const [lang, setLangState] = useState<Language>("en");
 
-  const setLang = (newLang: "en" | "ur") => {
+  // Synchronize document dir and lang attributes
+  const applyLanguageAttributes = useCallback((language: Language) => {
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language;
+      document.documentElement.dir = language === "ur" ? "rtl" : "ltr";
+      if (language === "ur") {
+        document.body.classList.add("lang-ur");
+      } else {
+        document.body.classList.remove("lang-ur");
+      }
+    }
+  }, []);
+
+  const setLang = (newLang: Language) => {
     setLangState(newLang);
+    applyLanguageAttributes(newLang);
     if (typeof window !== "undefined") {
-      localStorage.setItem("tabibcare_lang", newLang);
+      localStorage.setItem(LANG_STORAGE_KEY, newLang);
     }
   };
+
+  const t = useCallback(
+    (key: keyof TranslationDictionary): string => {
+      const dict = translations[lang] || translations.en;
+      return dict[key] || translations.en[key] || String(key);
+    },
+    [lang]
+  );
 
   const fetchProfile = async (userId: number) => {
     try {
@@ -64,9 +89,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const savedLang = localStorage.getItem("tabibcare_lang") as "en" | "ur" | null;
+      const savedLang = localStorage.getItem(LANG_STORAGE_KEY) as Language | null;
       if (savedLang === "en" || savedLang === "ur") {
         setLangState(savedLang);
+        applyLanguageAttributes(savedLang);
+      } else {
+        // Default to English explicitly
+        applyLanguageAttributes("en");
       }
 
       if (stored) {
@@ -79,7 +108,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [applyLanguageAttributes]);
 
   const login = (newUser: User, initialProfile?: HealthProfile) => {
     setUser(newUser);
@@ -145,6 +174,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         isLoading,
         lang,
         setLang,
+        t,
         login,
         logout,
         refreshProfile,

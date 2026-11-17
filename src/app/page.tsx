@@ -3,195 +3,247 @@
 import React from "react";
 import Link from "next/link";
 import { useUser } from "@/context/UserContext";
-import { Pill, MessageSquareHeart, FileText, ArrowRight, Sparkles, CheckCircle2, ShieldCheck, HeartPulse } from "lucide-react";
+import {
+  Pill,
+  MessageSquareHeart,
+  FileText,
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  ShieldCheck,
+  HeartPulse,
+  Activity,
+  AlertTriangle,
+  Clock,
+  Users,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/Card";
 
 export default function HomePage() {
-  const { user, lang } = useUser();
-
+  const { user, lang, t } = useUser();
   const isUrdu = lang === "ur";
 
+  const coreModules = [
+    {
+      title: t("module_meds_title"),
+      desc: t("module_meds_desc"),
+      icon: Pill,
+      href: "/meds",
+      badge: isUrdu ? "24 گھنٹے شیڈول" : "24-Hr Routine",
+      features: [
+        isUrdu ? "الرجی کا فوری خطرہ چیک" : "Automatic Allergy Conflict Alert",
+        isUrdu ? "کھانے کے ساتھ اردو ہدایات" : "Urdu + English Food Instructions",
+        isUrdu ? "صبح، دوپہر، شام، رات کے اوقات" : "Morning/Noon/Night Visual Timing",
+      ],
+      color: "teal",
+    },
+    {
+      title: t("module_triage_title"),
+      desc: t("module_triage_desc"),
+      icon: MessageSquareHeart,
+      href: "/triage",
+      badge: isUrdu ? "ڈبلیو ایچ او پروٹوکول" : "WHO Triage RAG",
+      features: [
+        isUrdu ? "4 سطحی خطرے کا فوری تعین" : "4-Level Urgency Classification",
+        isUrdu ? "1122 ایمرجنسی براہ راست رابطہ" : "Direct 1122 Emergency Escalation",
+        isUrdu ? "اردو اور انگریزی قدرتی گفتگو" : "Bilingual Conversational Intake",
+      ],
+      color: "emerald",
+    },
+    {
+      title: t("module_sbar_title"),
+      desc: t("module_sbar_desc"),
+      icon: FileText,
+      href: "/triage",
+      badge: isUrdu ? "1-کلک پرنٹ خلاصہ" : "1-Click PDF Ready",
+      features: [
+        isUrdu ? "مریض کی صورتحال اور پس منظر" : "Situation & Background Profiling",
+        isUrdu ? "ڈاکٹر کے معائنے کے لیے رہنما کارڈ" : "Physician-Ready Clinical Summary",
+        isUrdu ? "پرنٹ ایبل فارمیٹ" : "Instant Print & Export",
+      ],
+      color: "sky",
+    },
+  ];
+
   return (
-    <div className="space-y-12 py-4">
+    <div className="space-y-16 sm:space-y-24 py-4 sm:py-6">
       {/* Hero Section */}
-      <section className="text-center space-y-6 pt-4 pb-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-50 border border-teal-200/80 text-teal-800 text-xs font-semibold shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-          <span>SDG 3 Hackathon Initiative • Minhaj University Lahore</span>
+      <section className="text-center space-y-6 sm:space-y-8 max-w-4xl mx-auto pt-4 sm:pt-8">
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/90 text-teal-800 text-xs sm:text-sm font-semibold shadow-2xs">
+          <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
+          <span>{t("hero_badge")}</span>
         </div>
 
-        <div className="space-y-3 max-w-2xl mx-auto">
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            TabeebCare <span className="text-teal-600 font-serif font-normal">(طبیب کیئر)</span>
+        <div className="space-y-4">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 tracking-tight leading-[1.15]">
+            {t("hero_title")}
           </h1>
-          <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed">
-            {isUrdu
-              ? "پاکستانی مریضوں کے لیے نسخہ سمجھنے، علامات کے جائزے اور ڈاکٹر کے ہینڈ اوور کا آسان ترین AI پلیٹ فارم۔"
-              : "AI-powered healthcare literacy, prescription demystifier, and clinical triage companion designed to bridge patient-doctor communication in Pakistan."}
+          <p className="text-base sm:text-lg lg:text-xl text-slate-600 font-normal leading-relaxed max-w-3xl mx-auto">
+            {t("hero_subtitle")}
           </p>
         </div>
 
         {/* CTA Buttons */}
-        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+        <div className="flex flex-wrap items-center justify-center gap-3.5 pt-2">
           {user ? (
             <Link
               href="/dashboard"
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-sm transition-all hover:gap-3"
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm sm:text-base shadow-sm hover:shadow transition-all"
             >
-              <span>{isUrdu ? "ڈیش بورڈ پر جائیں" : "Go to Dashboard"}</span>
+              <span>{t("hero_cta_dashboard")}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           ) : (
             <>
               <Link
                 href="/login?demo=true"
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm shadow-sm transition-all hover:shadow"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm sm:text-base shadow-sm hover:shadow transition-all active:scale-95"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>{isUrdu ? "⚡ فوری جج ڈیمو لاگ ان" : "⚡ Instant Judge Demo"}</span>
+                <span>{t("hero_cta_demo")}</span>
               </Link>
               <Link
                 href="/signup"
-                className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold text-sm shadow-xs transition-colors"
+                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-sm sm:text-base shadow-2xs transition-colors"
               >
-                <span>{isUrdu ? "نیا اکاؤنٹ بنائیں" : "Create Account"}</span>
+                <span>{t("hero_cta_signup")}</span>
               </Link>
             </>
           )}
         </div>
 
         {/* Value Trust Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-6 pt-4 text-xs font-medium text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-600" />
-            100% Free & Offline-Ready (SQLite)
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-600" />
-            Evidence-Based WHO Triage RAG
-          </span>
-          <span className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-4 h-4 text-teal-600" />
-            Sub-Second Groq Llama 3.1 Inference
-          </span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-6 text-xs sm:text-sm font-medium text-slate-600 border-t border-slate-200/70 max-w-3xl mx-auto">
+          <div className="flex items-center justify-center gap-2 p-2">
+            <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>{t("hero_trust_offline")}</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2">
+            <ShieldCheck className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>{t("hero_trust_who")}</span>
+          </div>
+          <div className="flex items-center justify-center gap-2 p-2">
+            <Activity className="w-4 h-4 text-teal-600 shrink-0" />
+            <span>{t("hero_trust_fast")}</span>
+          </div>
         </div>
       </section>
 
-      {/* 3 Core Features Grid */}
-      <section className="space-y-4">
-        <div className="text-center space-y-1">
-          <h2 className="text-xl font-bold text-slate-800">
-            {isUrdu ? "طبیب کیئر کے بنیادی ماڈیولز" : "Core Patient Literacy Modules"}
+      {/* 3 Core Interactive Modules Grid */}
+      <section className="space-y-6">
+        <div className="text-center space-y-1.5 max-w-2xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            {t("modules_title")}
           </h2>
-          <p className="text-xs text-slate-500">
-            {isUrdu ? "تین کلیدی مسائل کا مکمل اور فوری حل" : "Targeting the 3 biggest barriers in primary care outpatient journeys"}
+          <p className="text-xs sm:text-sm text-slate-500">
+            {t("modules_subtitle")}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Card 1: Medicine Demystifier */}
-          <Card className="hover:border-teal-300 transition-all hover:shadow-md flex flex-col justify-between">
-            <CardContent className="space-y-3 pt-6">
-              <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200/80 text-teal-700 flex items-center justify-center">
-                <Pill className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                {isUrdu ? "1. نسخہ و ادویات ڈیمسٹیفائر" : "1. Medicine Demystifier"}
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {isUrdu
-                  ? "نسخے کی پیچیدہ دواؤں کا نام درج کریں، اور صبح/دوپہر/شام/رات کا تصویری شیڈول، کھانے کی احتیاطیں اور الرجی الرٹ حاصل کریں۔"
-                  : "Type prescribed medications to get an intuitive 24-hr visual schedule in English and Urdu, food rules, and allergy clash warnings."}
-              </p>
-            </CardContent>
-            <div className="p-6 pt-0">
-              <Link
-                href="/meds"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 hover:text-teal-800 hover:underline"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {coreModules.map((mod, idx) => {
+            const Icon = mod.icon;
+            return (
+              <Card
+                key={idx}
+                className="hover:border-teal-300 hover:shadow-lg transition-all flex flex-col justify-between group rounded-2xl"
               >
-                <span>{isUrdu ? "ادویات چیک کریں" : "Demystify Meds"}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </Card>
+                <CardContent className="p-6 sm:p-7 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center group-hover:scale-105 transition-transform shadow-xs">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-[11px] font-bold text-teal-800 bg-teal-50/90 border border-teal-200/80 px-2.5 py-1 rounded-full">
+                      {mod.badge}
+                    </span>
+                  </div>
 
-          {/* Card 2: Symptom Triage */}
-          <Card className="hover:border-teal-300 transition-all hover:shadow-md flex flex-col justify-between">
-            <CardContent className="space-y-3 pt-6">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/80 text-amber-700 flex items-center justify-center">
-                <MessageSquareHeart className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                {isUrdu ? "2. علامات ٹریآج و ایمرجنسی" : "2. Protocol Symptom Triage"}
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {isUrdu
-                  ? "اردو یا رومن اردو میں علامات بتائیں؛ سسٹم عالمی ادارہ صحت (WHO) کے پروٹوکول کے مطابق خطرے کی سطح (ایمرجنسی، ارجنٹ، روٹین) بتاتا ہے۔"
-                  : "Conversational intake in English, Urdu, or Roman Urdu. Classifies severity into Emergency, Urgent, Routine, or Home Care with WHO protocols."}
-              </p>
-            </CardContent>
-            <div className="p-6 pt-0">
-              <Link
-                href="/triage"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 hover:text-amber-800 hover:underline"
-              >
-                <span>{isUrdu ? "علامات چیک کریں" : "Start Triage"}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </Card>
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-bold text-slate-900 group-hover:text-teal-700 transition-colors">
+                      {mod.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                      {mod.desc}
+                    </p>
+                  </div>
 
-          {/* Card 3: Doctor Handover Card */}
-          <Card className="hover:border-teal-300 transition-all hover:shadow-md flex flex-col justify-between">
-            <CardContent className="space-y-3 pt-6">
-              <div className="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-200/80 text-sky-700 flex items-center justify-center">
-                <FileText className="w-6 h-6" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                {isUrdu ? "3. ڈاکٹر ہینڈ اوور کارڈ (SBAR)" : "3. Doctor Handover Card"}
-              </h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {isUrdu
-                  ? "ایک کلک پر بین الاقوامی معیار کا کلینیکل سمری کارڈ جو ڈاکٹر کو 3 منٹ کی ملاقات میں مریض کی مکمل کیفیت فوری سمجھا دیتا ہے۔"
-                  : "Auto-generates a standardized 1-page SBAR clinical handover card that the patient can print or show to save vital consultation time."}
-              </p>
-            </CardContent>
-            <div className="p-6 pt-0">
-              <Link
-                href="/triage"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-800 hover:underline"
-              >
-                <span>{isUrdu ? "ہینڈ اوور کارڈ بنائیں" : "Generate SBAR Card"}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-          </Card>
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    {mod.features.map((feat, fIdx) => (
+                      <div key={fIdx} className="flex items-center gap-2 text-xs text-slate-600">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="pt-4">
+                    <Link
+                      href={mod.href}
+                      className="inline-flex items-center gap-2 text-xs font-bold text-teal-700 group-hover:text-teal-800 group-hover:gap-2.5 transition-all"
+                    >
+                      <span>{t("btn_open")}</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
-      {/* Real-World Pakistani Context Banner */}
-      <section className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-4">
-        <div className="flex items-center gap-2.5">
-          <HeartPulse className="w-6 h-6 text-teal-600" />
-          <h3 className="text-base sm:text-lg font-bold text-slate-900">
-            {isUrdu ? "SDG 3 کے تحت پاکستان کا حقیقی مسئلہ" : "Real-World SDG 3 Challenge in Pakistan"}
-          </h3>
+      {/* How TabeebCare Works: 3-Step Journey */}
+      <section className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-10 shadow-xs space-y-8">
+        <div className="text-center space-y-2 max-w-xl mx-auto">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200/60">
+            {isUrdu ? "مریض کا آسان سفر" : "Simple 3-Step Journey"}
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+            {isUrdu ? "طبیب کیئر کیسے کام کرتا ہے؟" : "How TabeebCare Bridges Healthcare"}
+          </h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs text-slate-600">
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/70 space-y-1">
-            <span className="text-2xl font-extrabold text-teal-700">65%+</span>
-            <p className="text-slate-700 font-semibold">Prescription Misunderstanding</p>
-            <p className="text-slate-500">Patients struggle with illegible handwriting & complex English dosages.</p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-teal-600 text-white font-extrabold text-sm shadow-2xs">
+              1
+            </span>
+            <h4 className="text-base font-bold text-slate-900">
+              {isUrdu ? "نسخہ یا علامات درج کریں" : "Input Symptoms or Prescription"}
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {isUrdu
+                ? "مریض اردو، انگریزی یا رومن اردو میں اپنی علامات بتائے یا ہاتھ سے لکھا نسخہ درج کرے۔"
+                : "Type handwritten medicine names or converse naturally in Urdu, English, or Roman Urdu."}
+            </p>
           </div>
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/70 space-y-1">
-            <span className="text-2xl font-extrabold text-teal-700">&lt; 3 Mins</span>
-            <p className="text-slate-700 font-semibold">Average Consultation Time</p>
-            <p className="text-slate-500">Overburdened clinics leave little time for thorough patient history intake.</p>
+
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-teal-600 text-white font-extrabold text-sm shadow-2xs">
+              2
+            </span>
+            <h4 className="text-base font-bold text-slate-900">
+              {isUrdu ? "ڈبلیو ایچ او پروٹوکول پر AI جائزہ" : "WHO Protocol Clinical Evaluation"}
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {isUrdu
+                ? "سسٹم مریض کی الرجی اور بیماریوں کو مدنظر رکھ کر خطرے اور پرہیز کا درست تجزیہ کرتا ہے۔"
+                : "RAG retrieves matched clinical protocols, cross-checks allergies, and classifies triage urgency in under 1 second."}
+            </p>
           </div>
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/70 space-y-1">
-            <span className="text-2xl font-extrabold text-teal-700">1122 Ready</span>
-            <p className="text-slate-700 font-semibold">Zero-Delay Escalation</p>
-            <p className="text-slate-500">Emergency red flags trigger hard warnings and direct local emergency dialer.</p>
+
+          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-teal-600 text-white font-extrabold text-sm shadow-2xs">
+              3
+            </span>
+            <h4 className="text-base font-bold text-slate-900">
+              {isUrdu ? "ڈاکٹر کے لیے ہینڈ اوور کارڈ" : "1-Click Doctor Handover"}
+            </h4>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {isUrdu
+                ? "ڈاکٹر کے معائنے سے پہلے مکمل کلینیکل سمری تیار کریں تاکہ وقت کی بچت اور علاج مؤثر ہو۔"
+                : "Export or print an SBAR clinical card so consulting doctors immediately understand your situation and history."}
+            </p>
           </div>
         </div>
       </section>

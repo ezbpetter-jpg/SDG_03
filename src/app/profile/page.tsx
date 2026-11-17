@@ -7,12 +7,21 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { UserCheck, ShieldAlert, Pill, Plus, X, Check, Save } from "lucide-react";
+import {
+  UserCheck,
+  ShieldAlert,
+  Pill,
+  Plus,
+  X,
+  Check,
+  Save,
+  AlertTriangle,
+  HeartPulse,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, profile, updateProfile, isLoading: isUserLoading, lang } = useUser();
-
+  const { user, profile, updateProfile, isLoading: isUserLoading, lang, t } = useUser();
   const isUrdu = lang === "ur";
 
   const [age, setAge] = useState<string>("");
@@ -92,247 +101,274 @@ export default function ProfilePage() {
 
     setIsSaving(false);
     if (ok) {
-      setSuccessMessage(isUrdu ? "پروفائل کامیابی سے اپ ڈیٹ ہو گئی!" : "Health profile updated successfully!");
+      setSuccessMessage(t("profile_saved_toast"));
       setTimeout(() => setSuccessMessage(null), 4000);
     }
   };
 
   if (isUserLoading || !user) {
-    return <div className="text-center py-20 text-slate-400 text-sm">Loading profile...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] text-slate-400 text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <span>{isUrdu ? "پروفائل لوڈ ہو رہی ہے..." : "Loading patient profile..."}</span>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-2 space-y-6">
+    <div className="space-y-8 py-2 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
-        <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center">
-          <UserCheck className="w-5 h-5" />
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <UserCheck className="w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              {t("profile_title")}
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">
+              مریض کا ذاتی میڈیکل ریکارڈ • Local SQLite Storage
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight">
-            {isUrdu ? "ہیلتھ پروفائل و لانگ ٹرم میموری" : "Health Profile & Long-Term Memory"}
-          </h1>
-          <p className="text-xs text-slate-500">
-            {isUrdu
-              ? "یہ معلومات ہر نسخہ چیک اور ٹریآج گفتگو میں خودکار طور پر استعمال ہوتی ہیں۔"
-              : "Injected as long-term context into every AI consultation to prevent allergy and drug clashes."}
-          </p>
-        </div>
+        <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-2xl">
+          {t("profile_subtitle")}
+        </p>
       </div>
 
+      {/* Success Notification Banner */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs p-3 rounded-xl flex items-center gap-2 animate-in fade-in">
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in duration-200">
           <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-          <span>{successMessage}</span>
+          <span className="font-semibold">{successMessage}</span>
         </div>
       )}
 
-      <Card>
-        <CardContent className="p-6 space-y-6">
-          <form onSubmit={handleSave} className="space-y-6">
-            {/* Account Info Bar */}
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div>
-                <span className="text-slate-400 block uppercase font-medium">Logged in User</span>
-                <strong className="text-slate-800 text-sm">{user.name}</strong>
-              </div>
-              <div className="text-slate-500">
-                Email: <span className="font-mono text-slate-700">{user.email}</span>
-              </div>
+      {/* Form */}
+      <form onSubmit={handleSave} className="space-y-6">
+        {/* Section 1: Demographics */}
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50/70 p-5 sm:p-6 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">
+              {t("profile_basic_info")}
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              {isUrdu ? "عمر اور جنس کی معلومات" : "Age and gender help the AI calibrate drug dosages and triage thresholds."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input
+              label={t("profile_age_label")}
+              type="number"
+              min="1"
+              max="120"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="e.g. 54"
+            />
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                {t("profile_gender_label")}
+              </label>
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
+              >
+                <option value="Male">{isUrdu ? "مرد (Male)" : "Male"}</option>
+                <option value="Female">{isUrdu ? "عورت (Female)" : "Female"}</option>
+                <option value="Other">{isUrdu ? "دیگر (Other)" : "Other"}</option>
+              </select>
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Demographics */}
-            <div className="grid grid-cols-2 gap-4">
-              <Input
-                label="Age (سال)"
-                type="number"
-                placeholder="e.g. 54"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                min="1"
-                max="120"
+        {/* Section 2: Chronic Conditions */}
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50/70 p-5 sm:p-6 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">
+              {t("profile_conditions_title")}
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              {isUrdu ? "جیسے شوگر، بلڈ پریشر، دمہ وغیرہ" : "e.g. Type 2 Diabetes, Hypertension, Asthma, Ischemic Heart Disease."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 sm:p-6 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newConditionInput}
+                onChange={(e) => setNewConditionInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCondition();
+                  }
+                }}
+                placeholder={isUrdu ? "بیماری کا نام لکھ کر Add دبائیں..." : "Type condition and click Add..."}
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
               />
-
-              <div className="space-y-1">
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                  Gender (جنس)
-                </label>
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="flex h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
-                >
-                  <option value="Male">Male (مرد)</option>
-                  <option value="Female">Female (خاتون)</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddCondition}>
+                <Plus className="w-4 h-4 mr-1" />
+                {t("profile_add_btn")}
+              </Button>
             </div>
 
-            {/* Section: Chronic Conditions */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Chronic Medical Conditions (دائمی امراض)
-              </label>
-
-              <div className="flex flex-wrap gap-2 min-h-[36px] p-2 bg-slate-50/70 border border-slate-200 rounded-xl">
-                {conditions.length > 0 ? (
-                  conditions.map((cond) => (
-                    <span
-                      key={cond}
-                      className="inline-flex items-center gap-1.5 text-xs bg-teal-50 text-teal-800 border border-teal-200 px-2.5 py-1 rounded-lg font-medium"
+            <div className="flex flex-wrap gap-2 pt-1">
+              {conditions.length > 0 ? (
+                conditions.map((c, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200"
+                  >
+                    <span>{c}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveCondition(c)}
+                      className="text-teal-600 hover:text-red-600"
                     >
-                      {cond}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCondition(cond)}
-                        className="text-teal-600 hover:text-red-500"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-slate-400 italic py-1">No chronic conditions listed</span>
-                )}
-              </div>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-400 italic">{t("dash_none_reported")}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add condition (e.g. Type 2 Diabetes, Hypertension, Asthma)"
-                  value={newConditionInput}
-                  onChange={(e) => setNewConditionInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddCondition();
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
-                />
-                <Button type="button" size="sm" variant="outline" onClick={handleAddCondition}>
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Add
-                </Button>
-              </div>
+        {/* Section 3: Drug & Substance Allergies (Critical) */}
+        <Card className="rounded-2xl border-red-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-red-50/40 p-5 sm:p-6 border-b border-red-100">
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-red-600" />
+              <CardTitle className="text-base font-bold text-red-950">
+                {t("profile_allergies_title")}
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-red-700/80">
+              {isUrdu
+                ? "دواؤں کے خطرناک ردعمل سے بچنے کے لیے معلوم الرجیز درج کریں، مثلاً Penicillin, Sulfa"
+                : "Crucial: TabeebCare checks these against every prescription scan to prevent dangerous allergic reactions."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 sm:p-6 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newAllergyInput}
+                onChange={(e) => setNewAllergyInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddAllergy();
+                  }
+                }}
+                placeholder={isUrdu ? "الرجی کا نام لکھیں (مثلاً Penicillin, Sulfa)..." : "e.g. Penicillin, Sulfa, Aspirin..."}
+                className="flex-1 rounded-lg border border-red-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-400/20 focus:border-red-500"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={handleAddAllergy}>
+                <Plus className="w-4 h-4 mr-1" />
+                {t("profile_add_btn")}
+              </Button>
             </div>
 
-            {/* Section: Allergies */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <label className="block text-xs font-bold text-red-700 uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4 text-red-500" />
-                Drug & Food Allergies (معلوم الرجی الرٹس)
-              </label>
-
-              <div className="flex flex-wrap gap-2 min-h-[36px] p-2 bg-red-50/40 border border-red-200 rounded-xl">
-                {allergies.length > 0 ? (
-                  allergies.map((allergy) => (
-                    <span
-                      key={allergy}
-                      className="inline-flex items-center gap-1.5 text-xs bg-red-50 text-red-700 border border-red-200 px-2.5 py-1 rounded-lg font-semibold"
+            <div className="flex flex-wrap gap-2 pt-1">
+              {allergies.length > 0 ? (
+                allergies.map((a, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300"
+                  >
+                    <span>{a}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAllergy(a)}
+                      className="text-red-600 hover:text-red-900"
                     >
-                      {allergy}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveAllergy(allergy)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-xs text-slate-400 italic py-1">No drug allergies recorded</span>
-                )}
-              </div>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-400 italic">{t("dash_none_reported")}</span>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add allergy (e.g. Sulfa, Penicillin, Aspirin, Ibuprofen)"
-                  value={newAllergyInput}
-                  onChange={(e) => setNewAllergyInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddAllergy();
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
-                />
-                <Button type="button" size="sm" variant="outline" onClick={handleAddAllergy}>
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Add
-                </Button>
-              </div>
+        {/* Section 4: Current Medications */}
+        <Card className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
+          <CardHeader className="bg-slate-50/70 p-5 sm:p-6 border-b border-slate-100">
+            <CardTitle className="text-base font-bold text-slate-800">
+              {t("profile_meds_title")}
+            </CardTitle>
+            <CardDescription className="text-xs text-slate-500">
+              {isUrdu ? "جو ادویات آپ روزانہ باقاعدگی سے لیتے ہیں" : "Prescriptions you currently take regularly (e.g. Metformin 500mg, Amlodipine 5mg)."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 sm:p-6 space-y-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newMedInput}
+                onChange={(e) => setNewMedInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddMed();
+                  }
+                }}
+                placeholder={isUrdu ? "موجودہ دوا کا نام لکھیں..." : "e.g. Metformin 500mg, Amlodipine 5mg..."}
+                className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
+              />
+              <Button type="button" variant="outline" size="sm" onClick={handleAddMed}>
+                <Plus className="w-4 h-4 mr-1" />
+                {t("profile_add_btn")}
+              </Button>
             </div>
 
-            {/* Section: Current Medications */}
-            <div className="space-y-2 pt-2 border-t border-slate-100">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                <Pill className="w-4 h-4 text-teal-600" />
-                Current Active Medications (روزانہ کی ادویات)
-              </label>
-
-              <div className="space-y-1.5">
-                {medications.length > 0 ? (
-                  medications.map((med) => (
-                    <div
-                      key={med}
-                      className="flex items-center justify-between bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-xs"
+            <div className="flex flex-wrap gap-2 pt-1">
+              {medications.length > 0 ? (
+                medications.map((m, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-800 border border-sky-200"
+                  >
+                    <span>{m}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveMed(m)}
+                      className="text-sky-600 hover:text-red-600"
                     >
-                      <span className="font-semibold text-slate-700">{med}</span>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveMed(med)}
-                        className="text-slate-400 hover:text-red-500 p-1"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-xs text-slate-400 italic p-2 bg-slate-50 rounded-lg">
-                    No active medications recorded
-                  </div>
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Add medication (e.g. Metformin 500mg, Amlodipine 5mg)"
-                  value={newMedInput}
-                  onChange={(e) => setNewMedInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleAddMed();
-                    }
-                  }}
-                  className="flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600"
-                />
-                <Button type="button" size="sm" variant="outline" onClick={handleAddMed}>
-                  <Plus className="w-3.5 h-3.5 mr-1" />
-                  Add
-                </Button>
-              </div>
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-slate-400 italic">{t("dash_none_reported")}</span>
+              )}
             </div>
+          </CardContent>
+        </Card>
 
-            {/* Save Button */}
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isSaving}
-              className="w-full mt-4"
-            >
-              <Save className="w-4 h-4 mr-1.5" />
-              {isUrdu ? "محفوظ کریں (Save Changes)" : "Save Profile Changes"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        {/* Submit Button */}
+        <div className="flex justify-end pt-2">
+          <Button
+            type="submit"
+            isLoading={isSaving}
+            size="lg"
+            className="w-full sm:w-auto font-bold gap-2 shadow-sm"
+          >
+            <Save className="w-4 h-4" />
+            <span>{isSaving ? t("btn_saving") : t("btn_save")}</span>
+          </Button>
+        </div>
+      </form>
     </div>
   );
 }

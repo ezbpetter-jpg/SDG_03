@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { FileText, Printer, X, ShieldAlert, HeartPulse } from "lucide-react";
+import { FileText, Printer, X, HeartPulse, ShieldAlert, CheckCircle2 } from "lucide-react";
 import { Button } from "../ui/Button";
 
 interface SbarCardProps {
@@ -38,20 +38,20 @@ export function SbarCard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl max-w-2xl w-full border border-slate-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/30 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl max-w-3xl w-full border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center">
-              <FileText className="w-4 h-4" />
+        <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between no-print">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-xs">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
               <h3 className="text-sm sm:text-base font-bold text-slate-800">
                 Doctor Handover Card (SBAR Clinical Summary)
               </h3>
               <p className="text-xs text-slate-500">
-                Standardized clinical intake summary for your consulting physician
+                Standardized clinical intake summary for your consulting physician (طبی خلاصہ)
               </p>
             </div>
           </div>
@@ -63,110 +63,128 @@ export function SbarCard({
           </button>
         </div>
 
-        {/* Printable Card Content */}
-        <div className="p-6 overflow-y-auto space-y-5 text-sm text-slate-700 print:p-0">
+        {/* Printable Card Body */}
+        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-sm text-slate-700 print:p-0">
           {/* Header Banner */}
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <div className="flex items-center gap-2">
-              <HeartPulse className="w-5 h-5 text-teal-600" />
-              <span className="font-bold text-slate-800 tracking-tight">TabeebCare Clinical Handover</span>
+          <div className="flex items-center justify-between border-b-2 border-slate-200 pb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-teal-600 text-white flex items-center justify-center">
+                <HeartPulse className="w-4 h-4" />
+              </div>
+              <div>
+                <span className="font-extrabold text-slate-900 tracking-tight text-base sm:text-lg block">
+                  TabeebCare Clinical Handover
+                </span>
+                <span className="text-[11px] text-teal-700 font-semibold">
+                  طبیب کیئر کلینیکل ہینڈ اوور کارڈ • SDG 3
+                </span>
+              </div>
             </div>
-            <span className="text-xs text-slate-500 font-mono">
-              Date: {new Date().toLocaleDateString("en-GB")}
-            </span>
+            <div className="text-right text-xs text-slate-500 font-mono">
+              <p>Date: {new Date().toLocaleDateString("en-GB")}</p>
+              <p className="text-[11px] text-slate-400">Intake System: WHO Protocol RAG</p>
+            </div>
           </div>
 
-          {/* Patient Overview */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+          {/* Patient Overview Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
             <div>
-              <span className="text-slate-400 block uppercase font-medium">Patient</span>
-              <strong className="text-slate-800">{patientName}</strong>
+              <span className="text-slate-400 block uppercase font-bold text-[10px]">Patient Name</span>
+              <strong className="text-slate-900 text-sm">{patientName}</strong>
             </div>
             <div>
-              <span className="text-slate-400 block uppercase font-medium">Age / Gender</span>
-              <strong className="text-slate-800">
+              <span className="text-slate-400 block uppercase font-bold text-[10px]">Demographics</span>
+              <strong className="text-slate-900">
                 {patientAge ? `${patientAge} yrs` : "N/A"} • {patientGender || "N/A"}
               </strong>
             </div>
             <div>
-              <span className="text-slate-400 block uppercase font-medium">Triage Urgency</span>
-              <span className="font-bold uppercase text-teal-700">{triageLevel}</span>
+              <span className="text-slate-400 block uppercase font-bold text-[10px]">Triage Urgency</span>
+              <span className="font-extrabold uppercase text-teal-700 text-xs block mt-0.5">
+                {triageLevel}
+              </span>
             </div>
             <div>
-              <span className="text-slate-400 block uppercase font-medium">Allergies</span>
-              <span className="font-semibold text-red-600">
+              <span className="text-slate-400 block uppercase font-bold text-[10px]">Known Allergies</span>
+              <span className="font-bold text-red-600 block mt-0.5">
                 {allergies.length > 0 ? allergies.join(", ") : "None reported"}
               </span>
             </div>
           </div>
 
-          {/* SBAR Sections */}
+          {/* SBAR Clinical Sections */}
           <div className="space-y-4">
             {/* Situation */}
-            <div className="border-l-4 border-teal-500 pl-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-teal-800">
-                S — Situation (Chief Complaint)
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
+              <h4 className="text-xs font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-600" />
+                S — Situation (مریض کی فوری صورتحال)
               </h4>
-              <p className="mt-1 text-slate-800 leading-relaxed bg-teal-50/50 p-2.5 rounded-lg border border-teal-100">
-                {situation || "Patient reported acute medical discomfort."}
+              <p className="text-xs sm:text-sm text-slate-800 leading-relaxed pl-3.5 border-l-2 border-teal-200">
+                {situation || "Patient reported acute symptoms during conversational intake."}
               </p>
             </div>
 
             {/* Background */}
-            <div className="border-l-4 border-sky-500 pl-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-sky-800">
-                B — Background (History & Current Therapy)
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2">
+              <h4 className="text-xs font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-600" />
+                B — Background (طبی پس منظر اور موجودہ ادویات)
               </h4>
-              <div className="mt-1 space-y-1.5 text-xs bg-sky-50/50 p-2.5 rounded-lg border border-sky-100">
-                <p>
-                  <strong>Chronic Conditions:</strong>{" "}
-                  {conditions.length > 0 ? conditions.join(", ") : "None recorded"}
-                </p>
-                <p>
-                  <strong>Current Medications:</strong>{" "}
-                  {medications.length > 0 ? medications.join(", ") : "None currently active"}
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pl-3.5 border-l-2 border-teal-200">
+                <div>
+                  <strong className="text-slate-700 block">Chronic Conditions:</strong>
+                  <span className="text-slate-600">
+                    {conditions.length > 0 ? conditions.join(", ") : "None recorded"}
+                  </span>
+                </div>
+                <div>
+                  <strong className="text-slate-700 block">Current Medications:</strong>
+                  <span className="text-slate-600">
+                    {medications.length > 0 ? medications.join(", ") : "None reported"}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Assessment */}
-            <div className="border-l-4 border-amber-500 pl-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-800">
-                A — Assessment (Symptom Intake & Protocol Classification)
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
+              <h4 className="text-xs font-bold text-teal-800 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-600" />
+                A — Assessment (کلینیکل جائزہ اور علامات)
               </h4>
-              <p className="mt-1 text-slate-800 leading-relaxed bg-amber-50/50 p-2.5 rounded-lg border border-amber-100">
-                {assessment || "Clinical assessment completed via evidence-based WHO triage protocol matching."}
-              </p>
+              <div className="text-xs sm:text-sm text-slate-800 leading-relaxed pl-3.5 border-l-2 border-teal-200 whitespace-pre-wrap max-h-48 overflow-y-auto">
+                {assessment || "Clinical assessment generated through WHO Triage protocols."}
+              </div>
             </div>
 
-            {/* Request */}
-            <div className="border-l-4 border-emerald-500 pl-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                R — Recommendation / Request
+            {/* Recommendation */}
+            <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/50 space-y-1">
+              <h4 className="text-xs font-bold text-teal-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-teal-600" />
+                R — Recommendation (ڈاکٹر کے لیے تجاویز)
               </h4>
-              <p className="mt-1 text-slate-800 leading-relaxed bg-emerald-50/50 p-2.5 rounded-lg border border-emerald-100">
-                Requesting physical evaluation, diagnostic confirmation, and therapeutic prescription guidance by consulting physician.
+              <p className="text-xs sm:text-sm text-teal-950 leading-relaxed pl-3.5 border-l-2 border-teal-400">
+                Physical examination, vital signs verification (BP, Heart Rate, SpO2, Blood Sugar), and clinical diagnostic workup as indicated by physician.
               </p>
             </div>
           </div>
 
-          {/* Medical Notice */}
-          <div className="flex items-center gap-2 text-[11px] text-slate-400 border-t border-slate-200 pt-3">
-            <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>
-              Generated via TabeebCare (SDG 3 Health Literacy). Intended solely to facilitate patient-physician clinical intake.
-            </span>
+          {/* Footer Note */}
+          <div className="pt-2 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Prepared via TabeebCare SDG 3 Outreach System</span>
+            <span>Educational Support Only • Not a Final Diagnosis</span>
           </div>
         </div>
 
-        {/* Modal Footer Actions */}
-        <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2.5 print:hidden">
-          <Button variant="outline" onClick={onClose} size="sm">
-            Close
+        {/* Modal Actions */}
+        <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-3 no-print">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close (بند کریں)
           </Button>
-          <Button onClick={handlePrint} variant="primary" size="sm">
-            <Printer className="w-4 h-4 mr-1.5" />
-            Print / Save PDF
+          <Button variant="primary" size="sm" onClick={handlePrint} className="gap-1.5 shadow-sm">
+            <Printer className="w-4 h-4" />
+            Print / Save PDF (پرنٹ کریں)
           </Button>
         </div>
       </div>
