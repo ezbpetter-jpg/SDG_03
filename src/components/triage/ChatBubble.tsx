@@ -18,15 +18,30 @@ export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
 
   // Check if content begins with TRIAGE_LEVEL: ...
   let triageLevel: TriageLevel | null = null;
-  let cleanContent = content;
+  let cleanContent = content || "";
 
-  const match = content.match(/^TRIAGE_LEVEL:\s*(\w+)/i);
+  const match = cleanContent.match(/^TRIAGE_LEVEL:\s*(\w+)/i);
   if (match) {
     const rawLevel = match[1].toLowerCase();
     if (["emergency", "urgent", "routine", "home"].includes(rawLevel)) {
       triageLevel = rawLevel as TriageLevel;
-      cleanContent = content.replace(/^TRIAGE_LEVEL:\s*\w+\s*/i, "").trim();
+      cleanContent = cleanContent.replace(/^TRIAGE_LEVEL:\s*\w+\s*/i, "").trim();
     }
+  }
+
+  // If the message is completely empty and has no triage badge, do not render a blank avatar/circle
+  if (!cleanContent.trim() && !triageLevel && !isUser) {
+    return (
+      <div className="flex gap-2.5 sm:gap-3 items-center py-1">
+        <div className="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+          <Bot className="w-4 h-4" />
+        </div>
+        <div className="flex items-center gap-2 p-3 rounded-2xl bg-white border border-slate-200 text-xs text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+          <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare AI is preparing assessment..."}</span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -38,14 +53,14 @@ export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
     >
       <div
         className={clsx(
-          "flex gap-2.5 sm:gap-3 max-w-[92%] sm:max-w-[82%]",
+          "flex gap-2.5 sm:gap-3 max-w-[94%] sm:max-w-[85%]",
           isUser ? "flex-row-reverse" : "flex-row"
         )}
       >
         {/* Avatar */}
         <div
           className={clsx(
-            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold shadow-xs",
+            "w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold shadow-xs mt-0.5",
             isUser
               ? "bg-teal-100 text-teal-800 border border-teal-200"
               : "bg-teal-600 text-white shadow-teal-700/20"
@@ -72,8 +87,13 @@ export function ChatBubble({ role, content, lang = "en" }: ChatBubbleProps) {
           >
             {isUser ? (
               <p className="whitespace-pre-wrap break-words">{cleanContent}</p>
-            ) : (
+            ) : cleanContent.trim() ? (
               <MarkdownRenderer content={cleanContent} isUrdu={isUrdu} />
+            ) : (
+              <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
+                <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
+                <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare AI is analyzing symptoms..."}</span>
+              </div>
             )}
           </div>
         </div>

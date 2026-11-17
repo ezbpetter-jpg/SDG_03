@@ -68,7 +68,7 @@ export default function HomePage() {
   return (
     <div className="space-y-16 sm:space-y-24 py-4 sm:py-6">
       {/* Hero Section */}
-      <section className="text-center space-y-6 sm:space-y-8 max-w-4xl mx-auto pt-4 sm:pt-8">
+      <section className="text-center space-y-6 sm:space-y-8 max-w-5xl mx-auto pt-4 sm:pt-8">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200/90 text-teal-800 text-xs sm:text-sm font-semibold shadow-2xs">
           <Sparkles className="w-4 h-4 text-teal-600 shrink-0" />
           <span>{t("hero_badge")}</span>

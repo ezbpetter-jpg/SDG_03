@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { ChatBubble } from "@/components/triage/ChatBubble";
 import { EmergencyBanner } from "@/components/triage/EmergencyBanner";
+import { CrisisGuardrailBanner } from "@/components/triage/CrisisGuardrailBanner";
 import { SbarCard } from "@/components/triage/SbarCard";
 import { MedicalDisclaimerModal } from "@/components/layout/MedicalDisclaimer";
 import { Button } from "@/components/ui/Button";
+import { Badge } from "@/components/ui/Badge";
+import { checkSafetyGuardrails } from "@/lib/guardrails";
 import {
   MessageSquareHeart,
   Send,
@@ -17,6 +20,11 @@ import {
   AlertOctagon,
   Bot,
   Activity,
+  ShieldCheck,
+  PhoneCall,
+  HeartHandshake,
+  UserCheck,
+  HeartPulse,
 } from "lucide-react";
 
 interface Message {
@@ -37,6 +45,7 @@ export default function TriagePage() {
   const [isSbarOpen, setIsSbarOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -45,27 +54,33 @@ export default function TriagePage() {
   }, [user, isUserLoading, router]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   };
 
   useEffect(() => {
     scrollToBottom();
   }, [messages, isStreaming]);
 
-  // Hackathon starter scenario prompt chips
+  // Hackathon clinical scenario prompt chips
   const starterChips = [
     {
-      label: isUrdu ? "تیز بخار اور سردی" : "Tez Bukhar (2 days)",
-      value: "Mujhe 2 din se tez bukhar hai aur thand lag rahi hai.",
-    },
-    {
-      label: isUrdu ? "سینے میں شدید درد" : "Chest Pain & Breathing (Emergency)",
+      label: isUrdu ? "سینے میں شدید درد (ایمرجنسی)" : "Crushing Chest Pain & Breathing",
       value: "I have sudden crushing chest pain radiating to left arm and shortness of breath.",
       isEmergency: true,
     },
     {
+      label: isUrdu ? "تیز بخار اور سردی (2 دن)" : "Tez Bukhar (2 days)",
+      value: "Mujhe 2 din se tez bukhar hai aur thand lag rahi hai.",
+    },
+    {
       label: isUrdu ? "بچے کو الٹی اور دست" : "Pediatric Vomiting & Diarrhea",
       value: "Mere bacha ko 2 din se ulti aur dast ho rahe hain aur wo sust hai.",
+    },
+    {
+      label: isUrdu ? "ذہنی دباؤ اور پریشانی (امنگ ہیلپ لائن)" : "Severe Emotional Crisis Support",
+      value: "Mujhe bohat shadeed depression aur khauf mehsoos ho raha hai.",
     },
   ];
 
@@ -73,15 +88,13 @@ export default function TriagePage() {
     const text = textToSend || inputMessage;
     if (!text.trim() || isStreaming) return;
 
-    // Check mental health keywords for helpline escalation
-    const lower = text.toLowerCase();
-    if (
-      lower.includes("suicide") ||
-      lower.includes("self harm") ||
-      lower.includes("khatam karna") ||
-      lower.includes("marna chahta")
-    ) {
+    // Run client-side safety guardrails immediately
+    const guardrailCheck = checkSafetyGuardrails(text);
+    if (guardrailCheck.isSelfHarmOrCrisis) {
       setIsMentalHealth(true);
+      setCurrentTriageLevel("emergency");
+    } else if (guardrailCheck.isAcuteMedicalEmergency) {
+      setCurrentTriageLevel("emergency");
     }
 
     const newMessages: Message[] = [...messages, { role: "user", content: text.trim() }];
@@ -111,9 +124,6 @@ export default function TriagePage() {
       const decoder = new TextDecoder();
       let assistantResponse = "";
 
-      // Add placeholder assistant message
-      setMessages([...newMessages, { role: "assistant", content: "" }]);
-
       let done = false;
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -129,6 +139,15 @@ export default function TriagePage() {
             setCurrentTriageLevel(lvl);
           }
 
+          // Check for mental health guidance in response
+          if (
+            assistantResponse.toLowerCase().includes("umang") ||
+            assistantResponse.includes("0317")
+          ) {
+            setIsMentalHealth(true);
+          }
+
+          // Update messages only when content or badge arrives
           setMessages([...newMessages, { role: "assistant", content: assistantResponse }]);
         }
       }
@@ -168,28 +187,26 @@ export default function TriagePage() {
   const isEmergency = currentTriageLevel === "emergency";
 
   return (
-    <div className="space-y-6 py-2 max-w-5xl mx-auto">
+    <div className="w-full space-y-6 py-2">
       <MedicalDisclaimerModal featureKey="triage" />
 
-      {/* Header */}
+      {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/90 pb-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-teal-600 text-white flex items-center justify-center shadow-xs shrink-0">
               <MessageSquareHeart className="w-6 h-6" />
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
                 {t("triage_title")}
               </h1>
-              <span className="text-xs text-teal-700 font-semibold">
-                WHO Clinical Protocol Context • RAG Evaluator
+              <span className="text-xs text-teal-700 font-semibold flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-600" />
+                Evidence-Based WHO Clinical Protocol Context • RAG Powered
               </span>
             </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl">
-            {t("triage_subtitle")}
-          </p>
         </div>
 
         {/* Action Header Buttons */}
@@ -220,96 +237,198 @@ export default function TriagePage() {
         </div>
       </div>
 
-      {/* Emergency Alert Banner (Critical Escalation) */}
-      {isEmergency && (
-        <div className="animate-in fade-in slide-in-from-top-3 duration-300">
-          <EmergencyBanner isMentalHealth={isMentalHealth} />
-        </div>
-      )}
-
-      {/* Chat Container Box */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[65vh] min-h-[480px] max-h-[750px] overflow-hidden">
-        {/* Messages Stream Area */}
-        <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-4 max-w-lg mx-auto">
-              <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shadow-xs">
-                <Bot className="w-7 h-7" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className="text-base font-bold text-slate-800">
-                  {isUrdu ? "طبیب کیئر سے اپنی علامات شیئر کریں" : "Describe Your Symptoms"}
-                </h3>
-                <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
-                  {isUrdu
-                    ? "اردو، انگریزی یا رومن اردو میں اپنی علامات بتائیں۔ سسٹم ڈبلیو ایچ او پروٹوکول کے مطابق خطرے کا فوری تعین کرے گا۔"
-                    : "Type in Urdu, English, or Roman Urdu. The AI cross-references WHO triage protocols with your health profile to assess urgency."}
-                </p>
-              </div>
-
-              {/* Starter Chips */}
-              <div className="w-full space-y-2 pt-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                  {t("triage_starter_label")}
+      {/* Full-Width Workspace Layout: Left Sidebar + Right Live Chat */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Clinical Sidebar (4 Columns on Desktop) */}
+        <aside className="lg:col-span-4 space-y-4">
+          {/* Active Patient Vitals Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-4 h-4 text-teal-600" />
+                <span className="font-bold text-xs uppercase tracking-wider text-slate-800">
+                  {isUrdu ? "مریض کا ریکارڈ" : "Patient Context"}
                 </span>
-                <div className="flex flex-col gap-2">
-                  {starterChips.map((chip, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => handleSendMessage(chip.value)}
-                      className="text-left p-3 rounded-xl border border-slate-200 bg-white hover:bg-teal-50 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition-all shadow-2xs flex items-center justify-between group active:scale-98"
-                    >
-                      <span className="font-semibold">{chip.label}</span>
-                      <Sparkles className="w-3.5 h-3.5 text-teal-600 group-hover:scale-110 transition-transform" />
-                    </button>
-                  ))}
+              </div>
+              <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
+                SQLite Synced
+              </span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                <span className="text-slate-400">{isUrdu ? "مریض" : "Name"}</span>
+                <strong className="text-slate-800">{user.name}</strong>
+              </div>
+              <div className="flex justify-between items-center py-1 border-b border-slate-50">
+                <span className="text-slate-400">{isUrdu ? "عمر و جنس" : "Age/Gender"}</span>
+                <strong className="text-slate-800">
+                  {profile?.age ? `${profile.age} yrs` : "N/A"} • {profile?.gender || "Male"}
+                </strong>
+              </div>
+              <div className="py-1 border-b border-slate-50 space-y-1">
+                <span className="text-slate-400 block">{isUrdu ? "دائمی بیماریاں" : "Conditions"}</span>
+                <div className="flex flex-wrap gap-1">
+                  {profile?.conditions && profile.conditions.length > 0 ? (
+                    profile.conditions.map((c, i) => (
+                      <Badge key={i} variant="primary" size="sm">
+                        {c}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">None reported</span>
+                  )}
+                </div>
+              </div>
+              <div className="py-1 space-y-1">
+                <span className="text-red-500 font-semibold block">{isUrdu ? "معلوم الرجیز" : "Allergies"}</span>
+                <div className="flex flex-wrap gap-1">
+                  {profile?.allergies && profile.allergies.length > 0 ? (
+                    profile.allergies.map((a, i) => (
+                      <Badge key={i} variant="emergency" size="sm">
+                        {a}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-slate-400 italic">None reported</span>
+                  )}
                 </div>
               </div>
             </div>
-          ) : (
-            <>
-              {messages.map((msg, i) => (
-                <ChatBubble key={i} role={msg.role} content={msg.content} lang={lang} />
-              ))}
+          </div>
 
-              {isStreaming && (
-                <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold p-2">
-                  <div className="w-2 h-2 rounded-full bg-teal-600 animate-ping" />
-                  <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare is analyzing symptoms..."}</span>
+          {/* Safety & Emergency Hotlines Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-red-50/70 to-rose-50/40 border border-red-200 shadow-2xs space-y-3">
+            <div className="flex items-center gap-2 text-red-900 font-bold text-xs uppercase tracking-wider">
+              <PhoneCall className="w-4 h-4 text-red-600" />
+              <span>{isUrdu ? "ہنگامی ہیلپ لائنز (پاکستان)" : "Emergency Helplines"}</span>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <a
+                href="tel:1122"
+                className="flex items-center justify-between p-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold transition-all shadow-xs"
+              >
+                <span>Rescue 1122 Ambulance</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded">Dial 1122</span>
+              </a>
+
+              <a
+                href="tel:03174288665"
+                className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-red-200 text-red-900 hover:bg-red-50 font-semibold transition-all shadow-2xs"
+              >
+                <div className="flex items-center gap-1.5">
+                  <HeartHandshake className="w-4 h-4 text-red-600" />
+                  <span>Umang Crisis Line</span>
                 </div>
-              )}
-              <div ref={messagesEndRef} />
-            </>
-          )}
-        </div>
+                <span className="text-[11px] font-mono text-red-700">0317-4288665</span>
+              </a>
+            </div>
+          </div>
 
-        {/* Input Bar */}
-        <div className="p-3 sm:p-4 bg-white border-t border-slate-200">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="flex items-center gap-2"
-          >
-            <input
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              disabled={isStreaming}
-              placeholder={t("triage_input_placeholder")}
-              className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
-            />
-            <Button
-              type="submit"
-              disabled={!inputMessage.trim() || isStreaming}
-              isLoading={isStreaming}
-              className="px-4 sm:px-6 py-3 font-bold gap-1.5 shadow-sm"
+          {/* Common Scenario Chips */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-3">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block">
+              {t("triage_starter_label")}
+            </span>
+            <div className="flex flex-col gap-2">
+              {starterChips.map((chip, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSendMessage(chip.value)}
+                  className="text-left p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-teal-50 hover:border-teal-300 text-xs text-slate-700 hover:text-teal-900 transition-all shadow-2xs flex items-center justify-between group active:scale-98"
+                >
+                  <span className="font-semibold line-clamp-1">{chip.label}</span>
+                  <Sparkles className="w-3.5 h-3.5 text-teal-600 group-hover:scale-110 shrink-0 ml-1.5" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        {/* Right Live Triage Chat Area (8 Columns on Desktop) */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* Mental Health Crisis Guardrail Banner */}
+          {isMentalHealth && <CrisisGuardrailBanner />}
+
+          {/* Physical Emergency Banner */}
+          {isEmergency && !isMentalHealth && (
+            <div className="animate-in fade-in slide-in-from-top-3 duration-300">
+              <EmergencyBanner />
+            </div>
+          )}
+
+          {/* Chat Window Container */}
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[72vh] min-h-[520px] max-h-[800px] overflow-hidden">
+            {/* Messages Scroll Area with proper bottom padding */}
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4 bg-slate-50/40 pb-16"
             >
-              <Send className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("triage_btn_send")}</span>
-            </Button>
-          </form>
+              {messages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-4 max-w-lg mx-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center shadow-xs">
+                    <Bot className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <h3 className="text-base font-bold text-slate-800">
+                      {isUrdu ? "طبیب کیئر سے اپنی علامات شیئر کریں" : "Describe Your Symptoms"}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">
+                      {isUrdu
+                        ? "اردو، انگریزی یا رومن اردو میں اپنی علامات بتائیں۔ سسٹم ڈبلیو ایچ او پروٹوکول کے مطابق خطرے کا فوری تعین کرے گا۔"
+                        : "Type in Urdu, English, or Roman Urdu. The AI cross-references WHO triage protocols with your health profile to assess urgency."}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, i) => (
+                    <ChatBubble key={i} role={msg.role} content={msg.content} lang={lang} />
+                  ))}
+
+                  {isStreaming && (
+                    <div className="flex items-center gap-2 text-xs text-teal-700 font-semibold p-2">
+                      <div className="w-2 h-2 rounded-full bg-teal-600 animate-ping" />
+                      <span>{isUrdu ? "طبیب کیئر تجزیہ کر رہا ہے..." : "TabeebCare AI is analyzing symptoms..."}</span>
+                    </div>
+                  )}
+
+                  {/* Ref target with safe space */}
+                  <div ref={messagesEndRef} className="h-6" />
+                </>
+              )}
+            </div>
+
+            {/* Input Bar */}
+            <div className="p-3.5 sm:p-4 bg-white border-t border-slate-200 shrink-0">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendMessage();
+                }}
+                className="flex items-center gap-2"
+              >
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  disabled={isStreaming}
+                  placeholder={t("triage_input_placeholder")}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-600 transition-colors"
+                />
+                <Button
+                  type="submit"
+                  disabled={!inputMessage.trim() || isStreaming}
+                  isLoading={isStreaming}
+                  className="px-5 sm:px-7 py-3 font-bold gap-1.5 shadow-sm"
+                >
+                  <Send className="w-4 h-4" />
+                  <span className="hidden sm:inline">{t("triage_btn_send")}</span>
+                </Button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
 
