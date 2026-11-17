@@ -10,34 +10,34 @@ export function InitialSplashLoader() {
   const [statusText, setStatusText] = useState("Initializing Clinical Protocols • SDG 3");
 
   useEffect(() => {
-    // Stage 1: ~600ms
+    // Stage 1: ~1000ms
     const t1 = setTimeout(() => {
-      setProgress(48);
+      setProgress(40);
       setStatusText("Connecting to Groq AI Health Intelligence...");
-    }, 600);
+    }, 1000);
 
-    // Stage 2: ~1300ms
+    // Stage 2: ~2100ms
     const t2 = setTimeout(() => {
-      setProgress(78);
+      setProgress(72);
       setStatusText("Loading 15 Primary Care Guidelines (WHO)...");
-    }, 1300);
+    }, 2100);
 
-    // Stage 3: ~1900ms
+    // Stage 3: ~3200ms
     const t3 = setTimeout(() => {
-      setProgress(96);
+      setProgress(95);
       setStatusText("TabeebCare Ready • طبیب کیئر تیار ہے");
-    }, 1900);
+    }, 3200);
 
-    // Stage 4: ~2400ms (Start smooth 500ms fade-out)
+    // Stage 4: ~4200ms (Start smooth 550ms fade-out)
     const t4 = setTimeout(() => {
       setProgress(100);
       setFading(true);
-    }, 2400);
+    }, 4200);
 
-    // Stage 5: ~2900ms (Remove from DOM completely)
+    // Stage 5: ~4750ms (Remove from DOM completely)
     const t5 = setTimeout(() => {
       setVisible(false);
-    }, 2950);
+    }, 4750);
 
     return () => {
       clearTimeout(t1);
