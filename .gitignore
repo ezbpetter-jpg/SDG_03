@@ -1,0 +1,27 @@
+# Hackathon brief and documentation files
+docs/
+
+# Environment and secrets
+.env
+.env.local
+*.env
+
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Build artifacts
+dist/
+build/
+.next/
+out/
+
+# System and IDE files
+.DS_Store
+*.log
+.vscode/
+.idea/
