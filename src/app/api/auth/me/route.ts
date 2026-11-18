@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, isPersistentDatabaseConfigured } from "@/lib/db";
+import { DatabaseConfigError, getDb } from "@/lib/db";
 import {
   clearSessionCookie,
   DEMO_PROFILE,
   DEMO_USER,
   getSessionFromRequest,
   parseJsonArray,
+  SessionConfigError,
 } from "@/lib/auth";
+
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,16 +17,19 @@ export async function GET(req: NextRequest) {
     if (!session) {
       return NextResponse.json(
         { authenticated: false, user: null, profile: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
     if (session.isDemo || session.sub === DEMO_USER.id) {
-      return NextResponse.json({
-        authenticated: true,
-        user: DEMO_USER,
-        profile: DEMO_PROFILE,
-      });
+      return NextResponse.json(
+        {
+          authenticated: true,
+          user: DEMO_USER,
+          profile: DEMO_PROFILE,
+        },
+        { headers: NO_STORE_HEADERS }
+      );
     }
 
     const db = await getDb();
@@ -41,49 +47,47 @@ export async function GET(req: NextRequest) {
 
     const row = result.rows[0];
     if (!row) {
-      // If running on Vercel without Turso yet, allow client-side localStorage hydration to keep working
-      if (!isPersistentDatabaseConfigured()) {
-        return NextResponse.json({
-          authenticated: true,
-          user: {
-            id: session.sub,
-            name: session.name,
-            email: session.email,
-          },
-          profile: null,
-          ephemeralFallback: true,
-        });
-      }
-
       const response = NextResponse.json(
         { authenticated: false, user: null, profile: null },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
       clearSessionCookie(response);
       return response;
     }
 
-    return NextResponse.json({
-      authenticated: true,
-      user: {
-        id: Number(row.id),
-        name: String(row.name),
-        email: String(row.email),
+    return NextResponse.json(
+      {
+        authenticated: true,
+        user: {
+          id: Number(row.id),
+          name: String(row.name),
+          email: String(row.email),
+        },
+        profile: {
+          age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
+          gender: row.gender ? String(row.gender) : null,
+          conditions: parseJsonArray(row.conditions),
+          allergies: parseJsonArray(row.allergies),
+          current_medications: parseJsonArray(row.current_medications),
+          updated_at: row.updated_at ? String(row.updated_at) : null,
+        },
       },
-      profile: {
-        age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
-        gender: row.gender ? String(row.gender) : null,
-        conditions: parseJsonArray(row.conditions),
-        allergies: parseJsonArray(row.allergies),
-        current_medications: parseJsonArray(row.current_medications),
-        updated_at: row.updated_at ? String(row.updated_at) : null,
-      },
-    });
-  } catch (error) {
-    console.error("Auth session check error:", error);
+      { headers: NO_STORE_HEADERS }
+    );
+  } catch (error: unknown) {
+    if (error instanceof DatabaseConfigError || error instanceof SessionConfigError) {
+      return NextResponse.json(
+        { authenticated: false, error: error.message },
+        { status: 503, headers: NO_STORE_HEADERS }
+      );
+    }
+    console.error(
+      "Auth session check error:",
+      error instanceof Error ? error.message : "unknown error"
+    );
     return NextResponse.json(
       { authenticated: false, error: "Failed to verify session" },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

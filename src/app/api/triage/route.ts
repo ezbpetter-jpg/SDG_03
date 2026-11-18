@@ -2,13 +2,83 @@ import { NextRequest, NextResponse } from "next/server";
 import groq, { GROQ_MODEL } from "@/lib/groq";
 import { buildSystemPrompt, PatientProfileContext } from "@/lib/memory/context_builder";
 import { retrieveDetailedContext } from "@/lib/rag/retriever";
-import { getDb } from "@/lib/db";
+import { DatabaseConfigError, getDb } from "@/lib/db";
 import {
   DEMO_PROFILE,
   DEMO_USER,
   getSessionFromRequest,
   parseJsonArray,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate_limit";
+
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
+const ALLOWED_ROLES = new Set(["user", "assistant"]);
+
+export async function GET(req: NextRequest) {
+  try {
+    const session = getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (session.isDemo || session.sub === DEMO_USER.id) {
+      return NextResponse.json(
+        { success: true, sessions: [] },
+        { headers: NO_STORE_HEADERS }
+      );
+    }
+
+    const db = await getDb();
+    const result = await db.execute({
+      sql: `
+        SELECT id, messages, triage_level, summary, created_at
+        FROM triage_sessions
+        WHERE user_id = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT 20
+      `,
+      args: [session.sub],
+    });
+
+    const sessions = result.rows.map((row) => {
+      let parsedMessages: unknown[] = [];
+      try {
+        const parsed = JSON.parse(String(row.messages || "[]"));
+        if (Array.isArray(parsed)) parsedMessages = parsed;
+      } catch {
+        parsedMessages = [];
+      }
+
+      return {
+        id: Number(row.id),
+        messages: parsedMessages,
+        triage_level: row.triage_level ? String(row.triage_level) : null,
+        summary: row.summary ? String(row.summary) : "",
+        created_at: row.created_at ? String(row.created_at) : null,
+      };
+    });
+
+    return NextResponse.json(
+      { success: true, sessions },
+      { headers: NO_STORE_HEADERS }
+    );
+  } catch (error: unknown) {
+    if (error instanceof DatabaseConfigError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 503, headers: NO_STORE_HEADERS }
+      );
+    }
+    console.error("Triage GET error:", error instanceof Error ? error.message : "unknown error");
+    return NextResponse.json(
+      { error: "Failed to load triage history" },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
+  }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,47 +98,114 @@ export async function POST(req: NextRequest) {
       (!session && String(userId) === String(DEMO_USER.id));
     const effectiveUserId = session?.sub ?? null;
 
-    // Handle session saving request for authenticated non-demo users
-    if (saveSession && messages && Array.isArray(messages)) {
-      if (effectiveUserId && !isDemoUser) {
-        try {
-          const db = await getDb();
-          const lastAssistant = [...messages]
-            .reverse()
-            .find((m) => m.role === "assistant");
-          const summary =
-            lastAssistant?.content?.slice(0, 150) || "Triage consultation";
-          await db.execute({
-            sql: `
-              INSERT INTO triage_sessions (user_id, messages, triage_level, summary)
-              VALUES (?, ?, ?, ?)
-            `,
-            args: [effectiveUserId, JSON.stringify(messages), triageLevel, summary],
-          });
-        } catch (err) {
-          console.error("Failed to save triage session:", err);
-        }
-      }
-      return NextResponse.json({ success: true, saved: true });
+    // Require an authenticated session (real or demo)
+    if (!session && !isDemoUser) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401, headers: NO_STORE_HEADERS }
+      );
     }
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json(
         { error: "Conversation messages array is required" },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (messages.length > 50) {
+      return NextResponse.json(
+        { error: "Conversation exceeds maximum message limit (50)." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    // Sanitize and validate messages
+    const sanitizedMessages = messages
+      .filter(
+        (m: { role?: unknown; content?: unknown }) =>
+          m &&
+          typeof m.role === "string" &&
+          ALLOWED_ROLES.has(m.role) &&
+          typeof m.content === "string" &&
+          m.content.trim().length > 0
+      )
+      .map((m: { role: string; content: string }) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content.trim().slice(0, 4000),
+      }));
+
+    if (sanitizedMessages.length === 0) {
+      return NextResponse.json(
+        { error: "At least one valid non-empty message is required." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    // Handle session saving request for authenticated non-demo users
+    if (saveSession) {
+      if (effectiveUserId && !isDemoUser) {
+        const db = await getDb();
+        const lastAssistant = [...sanitizedMessages]
+          .reverse()
+          .find((m) => m.role === "assistant");
+        const summary =
+          lastAssistant?.content?.slice(0, 150) || "Triage consultation";
+        const safeLevel =
+          typeof triageLevel === "string" &&
+          ["emergency", "urgent", "routine", "home"].includes(
+            triageLevel.toLowerCase()
+          )
+            ? triageLevel.toLowerCase()
+            : null;
+
+        await db.execute({
+          sql: `
+            INSERT INTO triage_sessions (user_id, messages, triage_level, summary)
+            VALUES (?, ?, ?, ?)
+          `,
+          args: [
+            effectiveUserId,
+            JSON.stringify(sanitizedMessages),
+            safeLevel,
+            summary,
+          ],
+        });
+      }
+      return NextResponse.json(
+        { success: true, saved: Boolean(effectiveUserId && !isDemoUser) },
+        { headers: NO_STORE_HEADERS }
+      );
+    }
+
+    // Rate limit AI triage invocations
+    const ip = getClientIp(req);
+    const rateKey = `triage:${effectiveUserId ?? ip}`;
+    const rate = checkRateLimit(rateKey, 20, 5 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many triage requests. Please wait a moment and try again." },
+        {
+          status: 429,
+          headers: {
+            ...NO_STORE_HEADERS,
+            "Retry-After": String(rate.retryAfterSeconds),
+          },
+        }
       );
     }
 
     if (!process.env.GROQ_API_KEY?.trim()) {
       return NextResponse.json(
         { error: "AI service is not configured (missing GROQ_API_KEY)." },
-        { status: 503 }
+        { status: 503, headers: NO_STORE_HEADERS }
       );
     }
 
     // Find last user message for RAG retrieval
     const lastUserMsg =
-      [...messages].reverse().find((m) => m.role === "user")?.content || "";
+      [...sanitizedMessages].reverse().find((m) => m.role === "user")?.content ||
+      "";
 
     // Retrieve patient profile for long-term memory
     let profile: PatientProfileContext | null = null;
@@ -83,43 +220,27 @@ export async function POST(req: NextRequest) {
           clientProfile?.current_medications ?? DEMO_PROFILE.current_medications,
       };
     } else if (effectiveUserId) {
-      try {
-        const db = await getDb();
-        const result = await db.execute({
-          sql: `
-            SELECT u.name, p.age, p.gender, p.conditions, p.allergies, p.current_medications
-            FROM users u
-            LEFT JOIN health_profiles p ON u.id = p.user_id
-            WHERE u.id = ?
-            LIMIT 1
-          `,
-          args: [effectiveUserId],
-        });
+      const db = await getDb();
+      const result = await db.execute({
+        sql: `
+          SELECT u.name, p.age, p.gender, p.conditions, p.allergies, p.current_medications
+          FROM users u
+          LEFT JOIN health_profiles p ON u.id = p.user_id
+          WHERE u.id = ?
+          LIMIT 1
+        `,
+        args: [effectiveUserId],
+      });
 
-        const row = result.rows[0];
-        if (row) {
-          profile = {
-            name: String(row.name || session?.name || "Patient"),
-            age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
-            gender: row.gender ? String(row.gender) : null,
-            conditions: parseJsonArray(row.conditions),
-            allergies: parseJsonArray(row.allergies),
-            current_medications: parseJsonArray(row.current_medications),
-          };
-        }
-      } catch (err) {
-        console.error("Failed to fetch user profile for triage:", err);
-      }
-
-      // Fallback to client-provided profile if serverless container missed ephemeral DB
-      if (!profile && clientProfile) {
+      const row = result.rows[0];
+      if (row) {
         profile = {
-          name: session?.name || "Patient",
-          age: clientProfile.age ?? null,
-          gender: clientProfile.gender ?? null,
-          conditions: parseJsonArray(clientProfile.conditions),
-          allergies: parseJsonArray(clientProfile.allergies),
-          current_medications: parseJsonArray(clientProfile.current_medications),
+          name: String(row.name || session?.name || "Patient"),
+          age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
+          gender: row.gender ? String(row.gender) : null,
+          conditions: parseJsonArray(row.conditions),
+          allergies: parseJsonArray(row.allergies),
+          current_medications: parseJsonArray(row.current_medications),
         };
       }
     }
@@ -159,24 +280,6 @@ export async function POST(req: NextRequest) {
     // Assemble system prompt with RAG context and safety rules
     const { systemPrompt } = buildSystemPrompt(profile, lastUserMsg);
 
-    // Sanitize and filter out any empty messages to prevent API errors
-    const sanitizedMessages = messages
-      .filter(
-        (m: { role?: string; content?: string }) =>
-          m && typeof m.content === "string" && m.content.trim().length > 0
-      )
-      .map((m: { role: string; content: string }) => ({
-        role: m.role as "user" | "assistant" | "system",
-        content: m.content.trim(),
-      }));
-
-    if (sanitizedMessages.length === 0) {
-      sanitizedMessages.push({
-        role: "user",
-        content: lastUserMsg || "Hello",
-      });
-    }
-
     // Call Groq API with streaming
     const groqStream = await groq.chat.completions.create({
       model: GROQ_MODEL,
@@ -193,7 +296,6 @@ export async function POST(req: NextRequest) {
     const readableStream = new ReadableStream({
       async start(controller) {
         try {
-          // Send retrieval metadata as the FIRST SSE event before any tokens
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify(retrievalMetadata)}\n\n`)
           );
@@ -206,7 +308,10 @@ export async function POST(req: NextRequest) {
           }
           controller.close();
         } catch (err) {
-          console.error("Groq stream iteration error:", err);
+          console.error(
+            "Groq stream iteration error:",
+            err instanceof Error ? err.message : "unknown error"
+          );
           controller.error(err);
         }
       },
@@ -215,15 +320,20 @@ export async function POST(req: NextRequest) {
     return new Response(readableStream, {
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-store",
       },
     });
   } catch (error: unknown) {
-    console.error("Triage API error:", error);
-    const msg =
-      error instanceof Error
-        ? error.message
-        : "Failed to process triage consultation";
-    return NextResponse.json({ error: msg }, { status: 500 });
+    if (error instanceof DatabaseConfigError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 503, headers: NO_STORE_HEADERS }
+      );
+    }
+    console.error("Triage API error:", error instanceof Error ? error.message : "unknown error");
+    return NextResponse.json(
+      { error: "Failed to process triage consultation. Please try again." },
+      { status: 500, headers: NO_STORE_HEADERS }
+    );
   }
 }

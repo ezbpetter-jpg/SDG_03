@@ -1,12 +1,17 @@
 import { createClient, type Client } from "@libsql/client";
-import fs from "fs";
 import path from "path";
 import { initDB } from "./schema";
+
+export class DatabaseConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DatabaseConfigError";
+  }
+}
 
 const globalForDb = globalThis as unknown as {
   __tabeebcareDb?: Client;
   __tabeebcareDbInit?: Promise<Client>;
-  __tabeebcareWarnedEphemeral?: boolean;
 };
 
 function createDatabaseClient(): Client {
@@ -14,30 +19,31 @@ function createDatabaseClient(): Client {
   const tursoAuthToken = process.env.TURSO_AUTH_TOKEN?.trim();
 
   if (tursoUrl) {
+    const isRemote =
+      tursoUrl.startsWith("libsql://") ||
+      tursoUrl.startsWith("https://") ||
+      tursoUrl.startsWith("http://");
+
+    if (isRemote && !tursoAuthToken) {
+      throw new DatabaseConfigError(
+        "Database configuration incomplete: TURSO_AUTH_TOKEN is required when using a remote TURSO_DATABASE_URL."
+      );
+    }
+
     return createClient({
       url: tursoUrl,
       authToken: tursoAuthToken || undefined,
     });
   }
 
-  const isVercel = Boolean(process.env.VERCEL);
-  if (isVercel) {
-    if (!fs.existsSync("/tmp")) {
-      fs.mkdirSync("/tmp", { recursive: true });
-    }
-    if (!globalForDb.__tabeebcareWarnedEphemeral) {
-      globalForDb.__tabeebcareWarnedEphemeral = true;
-      console.warn(
-        "[TabeebCare DB] TURSO_DATABASE_URL is not configured on Vercel. " +
-          "Falling back to ephemeral file:/tmp/tabibcare.db. Configure TURSO_DATABASE_URL " +
-          "and TURSO_AUTH_TOKEN in Vercel Environment Variables for persistent multi-user accounts."
-      );
-    }
-    return createClient({
-      url: "file:/tmp/tabibcare.db",
-    });
+  // Never silently use ephemeral /tmp SQLite on Vercel — require Turso for persistent multi-user storage.
+  if (process.env.VERCEL) {
+    throw new DatabaseConfigError(
+      "Persistent database is not configured for this deployment. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN in Vercel Environment Variables."
+    );
   }
 
+  // Local development SQLite file
   const localPath = path.resolve(process.cwd(), "tabibcare.db");
   return createClient({
     url: `file:${localPath}`,
@@ -45,7 +51,15 @@ function createDatabaseClient(): Client {
 }
 
 export function isPersistentDatabaseConfigured(): boolean {
-  return Boolean(process.env.TURSO_DATABASE_URL?.trim()) || !process.env.VERCEL;
+  const tursoUrl = process.env.TURSO_DATABASE_URL?.trim();
+  if (tursoUrl) {
+    const isRemote =
+      tursoUrl.startsWith("libsql://") ||
+      tursoUrl.startsWith("https://") ||
+      tursoUrl.startsWith("http://");
+    return isRemote ? Boolean(process.env.TURSO_AUTH_TOKEN?.trim()) : true;
+  }
+  return !process.env.VERCEL;
 }
 
 export async function getDb(): Promise<Client> {

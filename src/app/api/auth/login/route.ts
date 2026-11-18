@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { DatabaseConfigError, getDb } from "@/lib/db";
 import {
   hashPassword,
   isValidEmail,
   parseJsonArray,
+  SessionConfigError,
   setSessionCookie,
   verifyPassword,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate_limit";
+
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,17 +19,36 @@ export async function POST(req: NextRequest) {
       typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
     const rawPassword = typeof body?.password === "string" ? body.password : "";
 
-    if (!cleanEmail || !rawPassword) {
+    const ip = getClientIp(req);
+    const rate = checkRateLimit(
+      `login:${ip}:${cleanEmail || "empty"}`,
+      10,
+      15 * 60 * 1000
+    );
+    if (!rate.allowed) {
       return NextResponse.json(
-        { error: "Email and password are required." },
-        { status: 400 }
+        { error: "Too many login attempts. Please wait before trying again." },
+        {
+          status: 429,
+          headers: {
+            ...NO_STORE_HEADERS,
+            "Retry-After": String(rate.retryAfterSeconds),
+          },
+        }
       );
     }
 
-    if (!isValidEmail(cleanEmail)) {
+    if (!cleanEmail || !rawPassword) {
       return NextResponse.json(
-        { error: "Please enter a valid email address." },
-        { status: 400 }
+        { error: "Email and password are required." },
+        { status: 400, headers: NO_STORE_HEADERS }
+      );
+    }
+
+    if (!isValidEmail(cleanEmail) || rawPassword.length > 128) {
+      return NextResponse.json(
+        { error: "Please enter a valid email address and password." },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -46,7 +69,7 @@ export async function POST(req: NextRequest) {
     if (!row) {
       return NextResponse.json(
         { error: "Invalid email or password." },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -56,7 +79,7 @@ export async function POST(req: NextRequest) {
     if (!valid) {
       return NextResponse.json(
         { error: "Invalid email or password." },
-        { status: 401 }
+        { status: 401, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -69,8 +92,8 @@ export async function POST(req: NextRequest) {
           sql: "UPDATE users SET password = ? WHERE id = ?",
           args: [hashPassword(rawPassword), userId],
         });
-      } catch (rehashErr) {
-        console.warn("Non-fatal password rehash failure:", rehashErr);
+      } catch {
+        // Non-fatal
       }
     }
 
@@ -89,19 +112,28 @@ export async function POST(req: NextRequest) {
       updated_at: row.updated_at ? String(row.updated_at) : null,
     };
 
-    const response = NextResponse.json({
-      success: true,
-      user,
-      profile,
-    });
+    const response = NextResponse.json(
+      {
+        success: true,
+        user,
+        profile,
+      },
+      { headers: NO_STORE_HEADERS }
+    );
 
     setSessionCookie(response, user);
     return response;
-  } catch (error) {
-    console.error("Login error:", error);
+  } catch (error: unknown) {
+    if (error instanceof DatabaseConfigError || error instanceof SessionConfigError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 503, headers: NO_STORE_HEADERS }
+      );
+    }
+    console.error("Login error:", error instanceof Error ? error.message : "unknown error");
     return NextResponse.json(
       { error: "An unexpected error occurred during login." },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

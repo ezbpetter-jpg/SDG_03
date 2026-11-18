@@ -1,14 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { DatabaseConfigError, getDb } from "@/lib/db";
 import {
   hashPassword,
   isValidEmail,
   parseJsonArray,
+  SessionConfigError,
   setSessionCookie,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate_limit";
+
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rate = checkRateLimit(`signup:${ip}`, 5, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Too many signup attempts. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            ...NO_STORE_HEADERS,
+            "Retry-After": String(rate.retryAfterSeconds),
+          },
+        }
+      );
+    }
+
     const body = await req.json();
     const {
       name,
@@ -25,31 +44,34 @@ export async function POST(req: NextRequest) {
     const cleanEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
     const rawPassword = typeof password === "string" ? password : "";
 
-    if (!cleanName || cleanName.length < 2) {
+    if (!cleanName || cleanName.length < 2 || cleanName.length > 100) {
       return NextResponse.json(
-        { error: "Please enter your full name (at least 2 characters)." },
-        { status: 400 }
+        { error: "Please enter your full name (2 to 100 characters)." },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     if (!cleanEmail || !isValidEmail(cleanEmail)) {
       return NextResponse.json(
         { error: "Please enter a valid email address." },
-        { status: 400 }
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
     if (cleanEmail === "ahmad.demo@tabeebcare.pk") {
       return NextResponse.json(
-        { error: "This email is reserved for the demo account. Please use your own email or click Quick Demo Login." },
-        { status: 400 }
+        {
+          error:
+            "This email is reserved for the demo account. Please use your own email or click Quick Demo Login.",
+        },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
-    if (rawPassword.length < 6) {
+    if (rawPassword.length < 6 || rawPassword.length > 128) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters long." },
-        { status: 400 }
+        { error: "Password must be between 6 and 128 characters long." },
+        { status: 400, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -59,7 +81,7 @@ export async function POST(req: NextRequest) {
       if (!Number.isInteger(numAge) || numAge < 1 || numAge > 120) {
         return NextResponse.json(
           { error: "Age must be a whole number between 1 and 120." },
-          { status: 400 }
+          { status: 400, headers: NO_STORE_HEADERS }
         );
       }
       parsedAge = numAge;
@@ -84,7 +106,7 @@ export async function POST(req: NextRequest) {
     if (existing.rows.length > 0) {
       return NextResponse.json(
         { error: "An account with this email already exists. Please sign in instead." },
-        { status: 409 }
+        { status: 409, headers: NO_STORE_HEADERS }
       );
     }
 
@@ -139,23 +161,29 @@ export async function POST(req: NextRequest) {
         user,
         profile,
       },
-      { status: 201 }
+      { status: 201, headers: NO_STORE_HEADERS }
     );
 
     setSessionCookie(response, user);
     return response;
   } catch (error: unknown) {
-    console.error("Signup error:", error);
+    if (error instanceof DatabaseConfigError || error instanceof SessionConfigError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 503, headers: NO_STORE_HEADERS }
+      );
+    }
     const message = error instanceof Error ? error.message : "";
     if (message.includes("UNIQUE") || message.includes("SQLITE_CONSTRAINT")) {
       return NextResponse.json(
         { error: "An account with this email already exists. Please sign in instead." },
-        { status: 409 }
+        { status: 409, headers: NO_STORE_HEADERS }
       );
     }
+    console.error("Signup error:", message || "unknown error");
     return NextResponse.json(
       { error: "Failed to create account. Please try again." },
-      { status: 500 }
+      { status: 500, headers: NO_STORE_HEADERS }
     );
   }
 }

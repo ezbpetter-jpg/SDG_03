@@ -2,7 +2,14 @@ import crypto from "crypto";
 import type { NextRequest, NextResponse } from "next/server";
 
 export const SESSION_COOKIE_NAME = "tabeebcare_session";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30; // 30 days
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
+
+export class SessionConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SessionConfigError";
+  }
+}
 
 export interface SessionUser {
   id: number;
@@ -49,14 +56,17 @@ function getSessionSecret(): string {
   if (configured && configured.length >= 16) {
     return configured;
   }
-  // Fallback derived from environment secrets so preview deployments still sign cookies cleanly
-  const fallbackSeed =
-    process.env.TURSO_AUTH_TOKEN?.trim() ||
-    process.env.GROQ_API_KEY?.trim() ||
-    "tabeebcare-local-dev-session-secret";
+
+  if (process.env.VERCEL) {
+    throw new SessionConfigError(
+      "Session signing secret is not configured. Set SESSION_SECRET (at least 16 characters) in Vercel Environment Variables."
+    );
+  }
+
+  // Local development fallback only (never used on Vercel)
   return crypto
     .createHash("sha256")
-    .update(`tabeebcare:session:${fallbackSeed}`)
+    .update("tabeebcare:local-dev-only-session-secret")
     .digest("hex");
 }
 
@@ -125,10 +135,15 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
   const [payloadB64, providedSig] = parts;
   if (!payloadB64 || !providedSig) return null;
 
-  const expectedSig = crypto
-    .createHmac("sha256", getSessionSecret())
-    .update(payloadB64)
-    .digest("base64url");
+  let expectedSig: string;
+  try {
+    expectedSig = crypto
+      .createHmac("sha256", getSessionSecret())
+      .update(payloadB64)
+      .digest("base64url");
+  } catch {
+    return null;
+  }
 
   const providedBuf = Buffer.from(providedSig);
   const expectedBuf = Buffer.from(expectedSig);
@@ -188,28 +203,39 @@ export function clearSessionCookie(res: NextResponse): void {
   });
 }
 
-export function parseJsonArray(val: unknown): string[] {
+export function parseJsonArray(
+  val: unknown,
+  maxItems = 50,
+  maxItemLength = 100
+): string[] {
+  let rawItems: string[] = [];
+
   if (Array.isArray(val)) {
-    return val.map((item) => String(item).trim()).filter(Boolean);
-  }
-  if (typeof val === "string") {
+    rawItems = val.map((item) => String(item).trim()).filter(Boolean);
+  } else if (typeof val === "string") {
     const trimmed = val.trim();
-    if (!trimmed) return [];
-    try {
-      const parsed = JSON.parse(trimmed);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item) => String(item).trim()).filter(Boolean);
+    if (trimmed) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          rawItems = parsed.map((item) => String(item).trim()).filter(Boolean);
+        } else {
+          rawItems = [trimmed];
+        }
+      } catch {
+        rawItems = trimmed
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
       }
-    } catch {
-      return trimmed
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
     }
   }
-  return [];
+
+  return rawItems
+    .slice(0, maxItems)
+    .map((item) => item.slice(0, maxItemLength));
 }
 
 export function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
