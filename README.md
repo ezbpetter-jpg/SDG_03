@@ -1,4 +1,4 @@
-# TabeebCare (طبیب کیئر) — AI for Accessible Healthcare & Well-Being
+# TabeebCare (طبیب کیئر) AI for Accessible Healthcare & Well-Being
 
 [![Live Deployment](https://img.shields.io/badge/Live%20Deployment-tabeeb--care.vercel.app-009688.svg?style=for-the-badge&logo=vercel)](https://tabeeb-care.vercel.app)
 [![UN SDG 3: Good Health & Well-Being](https://img.shields.io/badge/UN%20SDG-03%20Good%20Health%20%26%20Well--Being-009688.svg?style=for-the-badge&logo=un)](https://sdgs.un.org/goals/goal3)
