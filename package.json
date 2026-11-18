@@ -2,6 +2,9 @@
   "name": "tabeebcare",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "NODE_OPTIONS='--dns-result-order=ipv4first' next dev",
     "build": "next build",
@@ -9,6 +12,7 @@
     "lint": "echo 'Lint check passed'"
   },
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "clsx": "^2.1.1",
     "groq-sdk": "^0.15.0",
     "lucide-react": "^0.475.0",

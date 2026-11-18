@@ -1,63 +1,54 @@
 import { NextRequest, NextResponse } from "next/server";
-import db from "@/lib/db";
-
-const parseJsonSafely = (val: unknown): string[] => {
-  if (Array.isArray(val)) return val;
-  if (typeof val === "string") {
-    try {
-      const parsed = JSON.parse(val);
-      if (Array.isArray(parsed)) return parsed;
-    } catch {
-      return val
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-  }
-  return [];
-};
+import { getDb, isPersistentDatabaseConfigured } from "@/lib/db";
+import {
+  DEMO_PROFILE,
+  DEMO_USER,
+  getSessionFromRequest,
+  parseJsonArray,
+} from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req);
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
+    const requestedUserId = searchParams.get("userId");
 
-    if (!userId) {
+    if (!session) {
+      if (requestedUserId === String(DEMO_USER.id)) {
+        return NextResponse.json({
+          success: true,
+          user: DEMO_USER,
+          profile: DEMO_PROFILE,
+        });
+      }
       return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
+        { error: "Authentication required" },
+        { status: 401 }
       );
     }
 
-    if (userId === "999") {
+    if (session.isDemo || session.sub === DEMO_USER.id) {
       return NextResponse.json({
         success: true,
-        user: {
-          id: 999,
-          name: "Ahmad Khan (احمد خان)",
-          email: "ahmad.demo@tabeebcare.pk",
-          isDemo: true,
-        },
-        profile: {
-          age: 54,
-          gender: "Male",
-          conditions: ["Type 2 Diabetes", "Hypertension"],
-          allergies: ["Sulfa", "Penicillin"],
-          current_medications: ["Metformin 500mg", "Amlodipine 5mg"],
-        },
+        user: DEMO_USER,
+        profile: DEMO_PROFILE,
       });
     }
 
-    const row = db
-      .prepare(`
+    const db = await getDb();
+    const result = await db.execute({
+      sql: `
         SELECT u.id, u.name, u.email,
                p.age, p.gender, p.conditions, p.allergies, p.current_medications, p.updated_at
         FROM users u
         LEFT JOIN health_profiles p ON u.id = p.user_id
         WHERE u.id = ?
-      `)
-      .get(userId) as Record<string, unknown> | undefined;
+        LIMIT 1
+      `,
+      args: [session.sub],
+    });
 
+    const row = result.rows[0];
     if (!row) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
@@ -65,17 +56,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       user: {
-        id: row.id,
-        name: row.name,
-        email: row.email,
+        id: Number(row.id),
+        name: String(row.name),
+        email: String(row.email),
       },
       profile: {
-        age: row.age || null,
-        gender: row.gender || null,
-        conditions: parseJsonSafely(row.conditions),
-        allergies: parseJsonSafely(row.allergies),
-        current_medications: parseJsonSafely(row.current_medications),
-        updated_at: row.updated_at || null,
+        age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
+        gender: row.gender ? String(row.gender) : null,
+        conditions: parseJsonArray(row.conditions),
+        allergies: parseJsonArray(row.allergies),
+        current_medications: parseJsonArray(row.current_medications),
+        updated_at: row.updated_at ? String(row.updated_at) : null,
       },
     });
   } catch (error) {
@@ -89,64 +80,107 @@ export async function GET(req: NextRequest) {
 
 export async function PUT(req: NextRequest) {
   try {
+    const session = getSessionFromRequest(req);
+    if (!session) {
+      return NextResponse.json(
+        { error: "Authentication required. Please sign in again." },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
-      userId,
       age,
       gender,
       conditions = [],
       allergies = [],
       current_medications = [],
-    } = body;
+    } = body ?? {};
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: "User ID is required" },
-        { status: 400 }
-      );
+    let parsedAge: number | null = null;
+    if (age !== undefined && age !== null && String(age).trim() !== "") {
+      const numAge = Number(age);
+      if (!Number.isInteger(numAge) || numAge < 1 || numAge > 120) {
+        return NextResponse.json(
+          { error: "Age must be a whole number between 1 and 120." },
+          { status: 400 }
+        );
+      }
+      parsedAge = numAge;
     }
 
-    const conditionsJson = JSON.stringify(conditions);
-    const allergiesJson = JSON.stringify(allergies);
-    const medsJson = JSON.stringify(current_medications);
+    const cleanGender =
+      typeof gender === "string" && ["Male", "Female", "Other"].includes(gender)
+        ? gender
+        : null;
 
-    if (String(userId) === "999") {
+    const conditionsList = parseJsonArray(conditions);
+    const allergiesList = parseJsonArray(allergies);
+    const medsList = parseJsonArray(current_medications);
+
+    const updatedProfile = {
+      age: parsedAge,
+      gender: cleanGender,
+      conditions: conditionsList,
+      allergies: allergiesList,
+      current_medications: medsList,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (session.isDemo || session.sub === DEMO_USER.id) {
       return NextResponse.json({
         success: true,
-        profile: {
-          age: Number(age) || null,
-          gender: gender || null,
-          conditions,
-          allergies,
-          current_medications,
-        },
+        profile: updatedProfile,
       });
     }
 
-    const updateStmt = db.prepare(`
-      UPDATE health_profiles
-      SET age = ?, gender = ?, conditions = ?, allergies = ?, current_medications = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ?
-    `);
+    const db = await getDb();
 
-    updateStmt.run(
-      age ? Number(age) : null,
-      gender || null,
-      conditionsJson,
-      allergiesJson,
-      medsJson,
-      userId
-    );
+    // Ensure user exists in current DB before upserting profile
+    const userExists = await db.execute({
+      sql: "SELECT id FROM users WHERE id = ? LIMIT 1",
+      args: [session.sub],
+    });
+
+    if (userExists.rows.length === 0) {
+      if (!isPersistentDatabaseConfigured()) {
+        return NextResponse.json({
+          success: true,
+          profile: updatedProfile,
+          ephemeralFallback: true,
+        });
+      }
+      return NextResponse.json(
+        { error: "User account not found. Please sign in again." },
+        { status: 404 }
+      );
+    }
+
+    await db.execute({
+      sql: `
+        INSERT INTO health_profiles (user_id, age, gender, conditions, allergies, current_medications, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          age = excluded.age,
+          gender = excluded.gender,
+          conditions = excluded.conditions,
+          allergies = excluded.allergies,
+          current_medications = excluded.current_medications,
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      args: [
+        session.sub,
+        parsedAge,
+        cleanGender,
+        JSON.stringify(conditionsList),
+        JSON.stringify(allergiesList),
+        JSON.stringify(medsList),
+      ],
+    });
 
     return NextResponse.json({
       success: true,
-      profile: {
-        age: Number(age) || null,
-        gender: gender || null,
-        conditions,
-        allergies,
-        current_medications,
-      },
+      profile: updatedProfile,
     });
   } catch (error) {
     console.error("Profile PUT error:", error);

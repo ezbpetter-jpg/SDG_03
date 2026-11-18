@@ -1,23 +1,26 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { HeartPulse, UserPlus, Sparkles, AlertCircle, CheckCircle2 } from "lucide-react";
+import { UserPlus, AlertCircle, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import clsx from "clsx";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { login, lang, t } = useUser();
+  const { user, isLoading: isAuthLoading, login, lang } = useUser();
   const isUrdu = lang === "ur";
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("Male");
   const [conditions, setConditions] = useState<string[]>([]);
@@ -25,6 +28,13 @@ export default function SignupPage() {
   const [medications, setMedications] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect already authenticated users to dashboard
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthLoading, user, router]);
 
   const conditionOptions = [
     { label: "Type 2 Diabetes", labelUrdu: "شوگر (ذیابیطس)" },
@@ -43,9 +53,57 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !password) {
-      setError(isUrdu ? "براہ کرم بنیادی اکاؤنٹ کی معلومات مکمل کریں" : "Please fill in all required account fields");
+    const cleanName = name.trim();
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (cleanName.length < 2) {
+      setError(
+        isUrdu
+          ? "براہ کرم اپنا مکمل نام درج کریں (کم از کم 2 حروف)"
+          : "Please enter your full name (at least 2 characters)"
+      );
       return;
+    }
+
+    if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError(
+        isUrdu
+          ? "براہ کرم درست ای میل ایڈریس درج کریں"
+          : "Please enter a valid email address"
+      );
+      return;
+    }
+
+    if (password.length < 6) {
+      setError(
+        isUrdu
+          ? "پاس ورڈ کم از کم 6 حروف پر مشتمل ہونا چاہیے"
+          : "Password must be at least 6 characters long"
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        isUrdu
+          ? "پاس ورڈ اور تصدیقی پاس ورڈ آپس میں میل نہیں کھاتے"
+          : "Passwords do not match"
+      );
+      return;
+    }
+
+    let parsedAge: number | null = null;
+    if (age.trim() !== "") {
+      const n = Number(age);
+      if (!Number.isInteger(n) || n < 1 || n > 120) {
+        setError(
+          isUrdu
+            ? "عمر 1 سے 120 سال کے درمیان درست عدد ہونی چاہیے"
+            : "Age must be a valid whole number between 1 and 120"
+        );
+        return;
+      }
+      parsedAge = n;
     }
 
     setIsLoading(true);
@@ -64,11 +122,12 @@ export default function SignupPage() {
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          name,
-          email,
+          name: cleanName,
+          email: cleanEmail,
           password,
-          age: age ? Number(age) : null,
+          age: parsedAge,
           gender,
           conditions,
           allergies: allergyList,
@@ -78,23 +137,44 @@ export default function SignupPage() {
 
       const data = await res.json();
       if (res.ok && data.user) {
-        login(data.user, {
-          age: age ? Number(age) : null,
-          gender,
-          conditions,
-          allergies: allergyList,
-          current_medications: medList,
-        });
-        router.push("/dashboard");
+        login(
+          data.user,
+          data.profile || {
+            age: parsedAge,
+            gender,
+            conditions,
+            allergies: allergyList,
+            current_medications: medList,
+          }
+        );
+        router.replace("/dashboard");
       } else {
-        setError(data.error || (isUrdu ? "اکاؤنٹ بنانے میں مسئلہ پیش آیا" : "Failed to create account"));
+        setError(
+          data.error ||
+            (isUrdu ? "اکاؤنٹ بنانے میں مسئلہ پیش آیا" : "Failed to create account")
+        );
       }
     } catch {
-      setError(isUrdu ? "نیٹ ورک میں خرابی پیش آئی ہے" : "An unexpected network error occurred");
+      setError(
+        isUrdu
+          ? "نیٹ ورک میں خرابی پیش آئی ہے"
+          : "An unexpected network error occurred"
+      );
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading || user) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-slate-400 text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-7 h-7 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <span>{isUrdu ? "رجسٹریشن صفحہ لوڈ ہو رہا ہے..." : "Loading registration..."}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl w-full mx-auto py-6 sm:py-10">
@@ -114,7 +194,7 @@ export default function SignupPage() {
         </CardHeader>
 
         <CardContent className="p-6 sm:p-8 space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             {/* Account Credentials */}
             <div className="space-y-3">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -124,6 +204,8 @@ export default function SignupPage() {
                 <Input
                   label={isUrdu ? "مکمل نام" : "Full Name"}
                   type="text"
+                  name="name"
+                  autoComplete="name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Fatima Ali"
@@ -132,20 +214,63 @@ export default function SignupPage() {
                 <Input
                   label={isUrdu ? "ای میل ایڈریس" : "Email Address"}
                   type="email"
+                  name="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="patient@example.com"
                   required
                 />
               </div>
-              <Input
-                label={isUrdu ? "پاس ورڈ" : "Password"}
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                <div className="relative">
+                  <Input
+                    label={isUrdu ? "پاس ورڈ" : "Password"}
+                    type={showPassword ? "text" : "password"}
+                    name="new-password"
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Min. 6 characters"
+                    helperText={
+                      isUrdu ? "کم از کم 6 حروف" : "Minimum 6 characters"
+                    }
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    className="absolute right-2.5 top-[30px] p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <Input
+                    label={isUrdu ? "پاس ورڈ کی تصدیق کریں" : "Confirm Password"}
+                    type={showConfirmPassword ? "text" : "password"}
+                    name="confirm-password"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    className="absolute right-2.5 top-[30px] p-1 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Demographics */}
@@ -239,7 +364,10 @@ export default function SignupPage() {
             </div>
 
             {error && (
-              <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+              <div
+                role="alert"
+                className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                 <span>{error}</span>
               </div>

@@ -1,58 +1,93 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@/context/UserContext";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { HeartPulse, Sparkles, LogIn, AlertCircle } from "lucide-react";
+import { HeartPulse, Sparkles, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, lang, t } = useUser();
+  const { user, isLoading: isAuthLoading, login, lang } = useUser();
   const isUrdu = lang === "ur";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const demoTriggeredRef = useRef(false);
 
-  // Check if ?demo=true in URL
-  useEffect(() => {
-    if (searchParams.get("demo") === "true") {
-      handleDemoLogin();
-    }
-  }, [searchParams]);
-
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = useCallback(async () => {
     setIsDemoLoading(true);
     setError(null);
     try {
       const res = await fetch("/api/auth/demo", {
         method: "POST",
+        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data.user) {
         login(data.user, data.profile);
-        router.push("/dashboard");
+        router.replace("/dashboard");
       } else {
         setError(data.error || "Failed to initialize demo login");
       }
     } catch {
-      setError(isUrdu ? "ڈیمو لاگ ان میں نیٹ ورک کا مسئلہ پیش آیا" : "Network error while logging in as demo user");
+      setError(
+        isUrdu
+          ? "ڈیمو لاگ ان میں نیٹ ورک کا مسئلہ پیش آیا"
+          : "Network error while logging in as demo user"
+      );
     } finally {
       setIsDemoLoading(false);
     }
-  };
+  }, [isUrdu, login, router]);
+
+  // Redirect already authenticated users to dashboard
+  useEffect(() => {
+    if (!isAuthLoading && user) {
+      router.replace("/dashboard");
+    }
+  }, [isAuthLoading, user, router]);
+
+  // Check if ?demo=true in URL (guarded against double invocation)
+  useEffect(() => {
+    if (
+      !isAuthLoading &&
+      !user &&
+      searchParams.get("demo") === "true" &&
+      !demoTriggeredRef.current
+    ) {
+      demoTriggeredRef.current = true;
+      handleDemoLogin();
+    }
+  }, [isAuthLoading, user, searchParams, handleDemoLogin]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setError(isUrdu ? "براہ کرم ای میل اور پاس ورڈ دونوں درج کریں" : "Please fill in both email and password");
+    const cleanEmail = email.trim().toLowerCase();
+
+    if (!cleanEmail || !password) {
+      setError(
+        isUrdu
+          ? "براہ کرم ای میل اور پاس ورڈ دونوں درج کریں"
+          : "Please fill in both email and password"
+      );
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      setError(
+        isUrdu
+          ? "براہ کرم درست ای میل ایڈریس درج کریں"
+          : "Please enter a valid email address"
+      );
       return;
     }
 
@@ -62,21 +97,40 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        credentials: "include",
+        body: JSON.stringify({ email: cleanEmail, password }),
       });
       const data = await res.json();
       if (res.ok && data.user) {
-        login(data.user);
-        router.push("/dashboard");
+        login(data.user, data.profile);
+        router.replace("/dashboard");
       } else {
-        setError(data.error || (isUrdu ? "غلط ای میل یا پاس ورڈ" : "Invalid email or password"));
+        setError(
+          data.error ||
+            (isUrdu ? "غلط ای میل یا پاس ورڈ" : "Invalid email or password")
+        );
       }
     } catch {
-      setError(isUrdu ? "نیٹ ورک میں خرابی پیش آئی ہے" : "An unexpected network error occurred");
+      setError(
+        isUrdu
+          ? "نیٹ ورک میں خرابی پیش آئی ہے"
+          : "An unexpected network error occurred"
+      );
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (isAuthLoading || user) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh] text-slate-400 text-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-7 h-7 border-2 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          <span>{isUrdu ? "لاگ ان پورٹل لوڈ ہو رہا ہے..." : "Loading login portal..."}</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-md w-full mx-auto py-6 sm:py-10">
@@ -89,7 +143,9 @@ function LoginForm() {
             {isUrdu ? "طبیب کیئر پورٹل میں خوش آمدید" : "Sign in to TabeebCare"}
           </CardTitle>
           <CardDescription className="text-xs text-slate-500">
-            {isUrdu ? "اپنے اکاؤنٹ یا جج ڈیمو موڈ کے ذریعے لاگ ان کریں" : "Access your patient profile and clinical triage"}
+            {isUrdu
+              ? "اپنے اکاؤنٹ یا جج ڈیمو موڈ کے ذریعے لاگ ان کریں"
+              : "Access your patient profile and clinical triage"}
           </CardDescription>
         </CardHeader>
 
@@ -116,6 +172,7 @@ function LoginForm() {
               size="sm"
               onClick={handleDemoLogin}
               isLoading={isDemoLoading}
+              disabled={isLoading}
               className="w-full font-bold shadow-xs gap-1.5 bg-teal-600 hover:bg-teal-700"
             >
               <Sparkles className="w-3.5 h-3.5" />
@@ -125,32 +182,52 @@ function LoginForm() {
 
           <div className="relative flex items-center justify-center">
             <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-xs text-slate-400 uppercase font-medium">
+            <span className="bg-white px-3 text-xs text-slate-400 uppercase font-medium whitespace-nowrap">
               {isUrdu ? "یا ای میل سے لاگ ان کریں" : "Or standard login"}
             </span>
+            <div className="border-t border-slate-200 w-full" />
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <Input
               label={isUrdu ? "ای میل ایڈریس" : "Email Address"}
               type="email"
+              name="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="e.g. patient@example.com"
               required
             />
-            <Input
-              label={isUrdu ? "پاس ورڈ" : "Password"}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-            />
+
+            <div className="relative">
+              <Input
+                label={isUrdu ? "پاس ورڈ" : "Password"}
+                type={showPassword ? "text" : "password"}
+                name="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="pr-10"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-2.5 top-[30px] p-1 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
 
             {error && (
-              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+              <div
+                role="alert"
+                className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2"
+              >
                 <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
                 <span>{error}</span>
               </div>
@@ -161,6 +238,7 @@ function LoginForm() {
               variant="outline"
               size="md"
               isLoading={isLoading}
+              disabled={isDemoLoading}
               className="w-full font-bold gap-2"
             >
               <LogIn className="w-4 h-4 text-teal-600" />

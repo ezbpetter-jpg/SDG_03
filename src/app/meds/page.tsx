@@ -77,9 +77,11 @@ export default function MedsPage() {
       const res = await fetch("/api/meds", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           medications: text,
           userId: user?.id,
+          profile,
         }),
       });
 

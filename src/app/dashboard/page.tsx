@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 {t("dash_vitals_title")}
               </CardTitle>
               <p className="text-xs text-slate-500">
-                {isUrdu ? "طبیب کیئر میں محفوظ شدہ کوائف" : "Synchronized locally with SQLite tabibcare.db"}
+                {isUrdu ? "طبیب کیئر کلاؤڈ میں محفوظ شدہ کوائف" : "Synced securely with TabeebCare Cloud DB"}
               </p>
             </div>
           </div>

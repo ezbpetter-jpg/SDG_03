@@ -2,23 +2,49 @@ import { NextRequest, NextResponse } from "next/server";
 import groq, { GROQ_MODEL } from "@/lib/groq";
 import { buildSystemPrompt, PatientProfileContext } from "@/lib/memory/context_builder";
 import { retrieveDetailedContext } from "@/lib/rag/retriever";
-import db from "@/lib/db";
+import { getDb } from "@/lib/db";
+import {
+  DEMO_PROFILE,
+  DEMO_USER,
+  getSessionFromRequest,
+  parseJsonArray,
+} from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { messages, userId, saveSession = false, triageLevel = null } = body;
+    const {
+      messages,
+      userId,
+      profile: clientProfile = null,
+      saveSession = false,
+      triageLevel = null,
+    } = body ?? {};
 
-    // Handle session saving request
-    if (saveSession && userId && messages && Array.isArray(messages)) {
-      if (String(userId) !== "999") {
+    const session = getSessionFromRequest(req);
+    const isDemoUser =
+      Boolean(session?.isDemo) ||
+      session?.sub === DEMO_USER.id ||
+      (!session && String(userId) === String(DEMO_USER.id));
+    const effectiveUserId = session?.sub ?? null;
+
+    // Handle session saving request for authenticated non-demo users
+    if (saveSession && messages && Array.isArray(messages)) {
+      if (effectiveUserId && !isDemoUser) {
         try {
-          const lastAssistant = [...messages].reverse().find((m) => m.role === "assistant");
-          const summary = lastAssistant?.content?.slice(0, 150) || "Triage consultation";
-          db.prepare(`
-            INSERT INTO triage_sessions (user_id, messages, triage_level, summary)
-            VALUES (?, ?, ?, ?)
-          `).run(Number(userId), JSON.stringify(messages), triageLevel, summary);
+          const db = await getDb();
+          const lastAssistant = [...messages]
+            .reverse()
+            .find((m) => m.role === "assistant");
+          const summary =
+            lastAssistant?.content?.slice(0, 150) || "Triage consultation";
+          await db.execute({
+            sql: `
+              INSERT INTO triage_sessions (user_id, messages, triage_level, summary)
+              VALUES (?, ?, ?, ?)
+            `,
+            args: [effectiveUserId, JSON.stringify(messages), triageLevel, summary],
+          });
         } catch (err) {
           console.error("Failed to save triage session:", err);
         }
@@ -33,41 +59,68 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!process.env.GROQ_API_KEY?.trim()) {
+      return NextResponse.json(
+        { error: "AI service is not configured (missing GROQ_API_KEY)." },
+        { status: 503 }
+      );
+    }
+
     // Find last user message for RAG retrieval
-    const lastUserMsg = [...messages].reverse().find((m) => m.role === "user")?.content || "";
+    const lastUserMsg =
+      [...messages].reverse().find((m) => m.role === "user")?.content || "";
 
     // Retrieve patient profile for long-term memory
     let profile: PatientProfileContext | null = null;
-    if (userId) {
-      if (String(userId) === "999") {
-        profile = {
-          name: "Ahmad Khan (احمد خان)",
-          age: 54,
-          gender: "Male",
-          conditions: ["Type 2 Diabetes", "Hypertension"],
-          allergies: ["Sulfa", "Penicillin"],
-          current_medications: ["Metformin 500mg", "Amlodipine 5mg"],
-        };
-      } else {
-        const row = db
-          .prepare(`
+    if (isDemoUser) {
+      profile = {
+        name: DEMO_USER.name,
+        age: clientProfile?.age ?? DEMO_PROFILE.age,
+        gender: clientProfile?.gender ?? DEMO_PROFILE.gender,
+        conditions: clientProfile?.conditions ?? DEMO_PROFILE.conditions,
+        allergies: clientProfile?.allergies ?? DEMO_PROFILE.allergies,
+        current_medications:
+          clientProfile?.current_medications ?? DEMO_PROFILE.current_medications,
+      };
+    } else if (effectiveUserId) {
+      try {
+        const db = await getDb();
+        const result = await db.execute({
+          sql: `
             SELECT u.name, p.age, p.gender, p.conditions, p.allergies, p.current_medications
             FROM users u
             LEFT JOIN health_profiles p ON u.id = p.user_id
             WHERE u.id = ?
-          `)
-          .get(userId) as Record<string, unknown> | undefined;
+            LIMIT 1
+          `,
+          args: [effectiveUserId],
+        });
 
+        const row = result.rows[0];
         if (row) {
           profile = {
-            name: String(row.name || "Patient"),
-            age: row.age ? Number(row.age) : null,
+            name: String(row.name || session?.name || "Patient"),
+            age: row.age !== null && row.age !== undefined ? Number(row.age) : null,
             gender: row.gender ? String(row.gender) : null,
-            conditions: row.conditions as string,
-            allergies: row.allergies as string,
-            current_medications: row.current_medications as string,
+            conditions: parseJsonArray(row.conditions),
+            allergies: parseJsonArray(row.allergies),
+            current_medications: parseJsonArray(row.current_medications),
           };
         }
+      } catch (err) {
+        console.error("Failed to fetch user profile for triage:", err);
+      }
+
+      // Fallback to client-provided profile if serverless container missed ephemeral DB
+      if (!profile && clientProfile) {
+        profile = {
+          name: session?.name || "Patient",
+          age: clientProfile.age ?? null,
+          gender: clientProfile.gender ?? null,
+          conditions: parseJsonArray(clientProfile.conditions),
+          allergies: parseJsonArray(clientProfile.allergies),
+          current_medications: parseJsonArray(clientProfile.current_medications),
+        };
       }
     }
 
@@ -79,26 +132,16 @@ export async function POST(req: NextRequest) {
     const matchedKeywords: string[] = [];
     for (const protocol of ragResult.matchedProtocols) {
       for (const keyword of protocol.keywords) {
-        if (normalizedUserMsg.includes(keyword.toLowerCase()) && !matchedKeywords.includes(keyword)) {
+        if (
+          normalizedUserMsg.includes(keyword.toLowerCase()) &&
+          !matchedKeywords.includes(keyword)
+        ) {
           matchedKeywords.push(keyword);
         }
       }
     }
 
-    const parseList = (item: string[] | string | undefined | null): string[] => {
-      if (!item) return [];
-      if (Array.isArray(item)) return item;
-      try {
-        const parsed = JSON.parse(item);
-        if (Array.isArray(parsed)) return parsed;
-      } catch {}
-      return String(item)
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean);
-    };
-
-    // First SSE Event: Retrieval Metadata (All values from real retriever & context_builder)
+    // First SSE Event: Retrieval Metadata
     const retrievalMetadata = {
       type: "meta",
       protocols: ragResult.matchedProtocols.map((p) => ({
@@ -108,8 +151,8 @@ export async function POST(req: NextRequest) {
       matchedKeywords,
       severity: ragResult.highestSeverity || "routine",
       profileUsed: {
-        conditions: profile ? parseList(profile.conditions) : [],
-        allergies: profile ? parseList(profile.allergies) : [],
+        conditions: profile ? parseJsonArray(profile.conditions) : [],
+        allergies: profile ? parseJsonArray(profile.allergies) : [],
       },
     };
 
@@ -151,7 +194,9 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         try {
           // Send retrieval metadata as the FIRST SSE event before any tokens
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(retrievalMetadata)}\n\n`));
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(retrievalMetadata)}\n\n`)
+          );
 
           for await (const chunk of groqStream) {
             const text = chunk.choices[0]?.delta?.content || "";
@@ -175,7 +220,10 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error("Triage API error:", error);
-    const msg = error instanceof Error ? error.message : "Failed to process triage consultation";
+    const msg =
+      error instanceof Error
+        ? error.message
+        : "Failed to process triage consultation";
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

@@ -114,14 +114,18 @@ export default function TriagePage() {
     setIsStreaming(true);
 
     let assistantResponse = "";
+    let detectedLevel: string | null = currentTriageLevel;
+    let hadError = false;
 
     try {
       const res = await fetch("/api/triage", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           messages: newMessages,
           userId: user?.id,
+          profile,
         }),
       });
 
@@ -169,6 +173,7 @@ export default function TriagePage() {
           const match = assistantResponse.match(/TRIAGE_LEVEL:\s*(\w+)/i);
           if (match) {
             const lvl = match[1].toLowerCase();
+            detectedLevel = lvl;
             setCurrentTriageLevel(lvl);
           }
 
@@ -186,7 +191,27 @@ export default function TriagePage() {
           }
         }
       }
+
+      // Persist completed triage session for authenticated non-demo users
+      if (assistantResponse.trim() && user && !user.isDemo) {
+        const fullThread: Message[] = [
+          ...newMessages,
+          { role: "assistant", content: assistantResponse },
+        ];
+        fetch("/api/triage", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            messages: fullThread,
+            userId: user.id,
+            saveSession: true,
+            triageLevel: detectedLevel,
+          }),
+        }).catch(() => {});
+      }
     } catch {
+      hadError = true;
       setMessages((prev) => [
         ...prev.filter((m) => m.content.trim().length > 0),
         {
@@ -198,8 +223,8 @@ export default function TriagePage() {
       ]);
     } finally {
       setIsStreaming(false);
-      // Ensure if the stream completed with empty response, provide a safe fallback
-      if (!assistantResponse.trim()) {
+      // Ensure if the stream completed cleanly with an empty response, provide a safe fallback
+      if (!hadError && !assistantResponse.trim()) {
         setMessages((prev) => [
           ...prev.filter((m) => m.content.trim().length > 0),
           {
@@ -314,7 +339,7 @@ export default function TriagePage() {
                 </span>
               </div>
               <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full border border-teal-200/60">
-                SQLite Synced
+                Profile Synced
               </span>
             </div>
 

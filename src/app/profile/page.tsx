@@ -36,6 +36,7 @@ export default function ProfilePage() {
 
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -90,6 +91,7 @@ export default function ProfilePage() {
     e.preventDefault();
     setIsSaving(true);
     setSuccessMessage(null);
+    setErrorMessage(null);
 
     const ok = await updateProfile({
       age: age ? Number(age) : null,
@@ -103,6 +105,12 @@ export default function ProfilePage() {
     if (ok) {
       setSuccessMessage(t("profile_saved_toast"));
       setTimeout(() => setSuccessMessage(null), 4000);
+    } else {
+      setErrorMessage(
+        isUrdu
+          ? "پروفائل محفوظ کرنے میں مسئلہ پیش آیا۔ براہ کرم دوبارہ کوشش کریں۔"
+          : "Failed to save profile changes. Please try again."
+      );
     }
   };
 
@@ -130,7 +138,7 @@ export default function ProfilePage() {
               {t("profile_title")}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
-              مریض کا ذاتی میڈیکل ریکارڈ • Local SQLite Storage
+              مریض کا ذاتی میڈیکل ریکارڈ • Cloud-Synced Patient Storage
             </p>
           </div>
         </div>
@@ -139,11 +147,20 @@ export default function ProfilePage() {
         </p>
       </div>
 
-      {/* Success Notification Banner */}
+      {/* Success / Error Notification Banners */}
       {successMessage && (
         <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in duration-200">
           <Check className="w-4 h-4 text-emerald-600 shrink-0" />
           <span className="font-semibold">{successMessage}</span>
+        </div>
+      )}
+      {errorMessage && (
+        <div
+          role="alert"
+          className="p-4 rounded-xl bg-red-50 border border-red-300 text-red-800 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in duration-200"
+        >
+          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+          <span className="font-semibold">{errorMessage}</span>
         </div>
       )}
 

@@ -32,8 +32,8 @@ export function Navbar() {
     { href: "/profile", label: t("nav_profile"), icon: UserCheck },
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setIsMobileMenuOpen(false);
     router.push("/");
   };

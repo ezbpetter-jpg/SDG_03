@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import groq, { GROQ_MODEL } from "@/lib/groq";
 import { MEDS_SYSTEM_PROMPT } from "@/lib/prompts/meds_prompt";
-import db from "@/lib/db";
+import { getDb } from "@/lib/db";
+import {
+  DEMO_PROFILE,
+  DEMO_USER,
+  getSessionFromRequest,
+  parseJsonArray,
+} from "@/lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { medications, userId } = body;
+    const { medications, userId, profile: clientProfile = null } = body ?? {};
 
     if (!medications || typeof medications !== "string" || !medications.trim()) {
       return NextResponse.json(
@@ -15,34 +21,81 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!process.env.GROQ_API_KEY?.trim()) {
+      return NextResponse.json(
+        { error: "AI service is not configured (missing GROQ_API_KEY)." },
+        { status: 503 }
+      );
+    }
+
+    const session = getSessionFromRequest(req);
+    const isDemoUser =
+      Boolean(session?.isDemo) ||
+      session?.sub === DEMO_USER.id ||
+      (!session && String(userId) === String(DEMO_USER.id));
+    const effectiveUserId = session?.sub ?? null;
+
     // Retrieve user allergies and conditions for cross-checking
     let userContextString = "No specific patient profile provided.";
     let activeUserId: number | null = null;
 
-    if (userId) {
-      if (String(userId) === "999") {
-        userContextString = `Patient: Ahmad Khan (Age 54, Male).
-Known Chronic Conditions: Type 2 Diabetes, Hypertension.
-Recorded Allergies: Sulfa, Penicillin.
-Current Medications: Metformin 500mg, Amlodipine 5mg.`;
-      } else {
-        const row = db
-          .prepare(`
+    if (isDemoUser) {
+      const conditions = parseJsonArray(
+        clientProfile?.conditions ?? DEMO_PROFILE.conditions
+      );
+      const allergies = parseJsonArray(
+        clientProfile?.allergies ?? DEMO_PROFILE.allergies
+      );
+      const currentMeds = parseJsonArray(
+        clientProfile?.current_medications ?? DEMO_PROFILE.current_medications
+      );
+      userContextString = `Patient: ${DEMO_USER.name} (Age ${clientProfile?.age ?? DEMO_PROFILE.age}, ${clientProfile?.gender ?? DEMO_PROFILE.gender}).
+Known Chronic Conditions: ${conditions.join(", ") || "None"}.
+Recorded Allergies: ${allergies.join(", ") || "None"}.
+Current Medications: ${currentMeds.join(", ") || "None"}.`;
+    } else if (effectiveUserId) {
+      let loadedFromDb = false;
+      try {
+        const db = await getDb();
+        const result = await db.execute({
+          sql: `
             SELECT u.name, p.age, p.gender, p.conditions, p.allergies, p.current_medications
             FROM users u
             LEFT JOIN health_profiles p ON u.id = p.user_id
             WHERE u.id = ?
-          `)
-          .get(userId) as Record<string, unknown> | undefined;
+            LIMIT 1
+          `,
+          args: [effectiveUserId],
+        });
 
+        const row = result.rows[0];
         if (row) {
-          activeUserId = Number(userId);
-          userContextString = `Patient: ${row.name || "Patient"}.
+          loadedFromDb = true;
+          activeUserId = effectiveUserId;
+          const conditions = parseJsonArray(row.conditions);
+          const allergies = parseJsonArray(row.allergies);
+          const currentMeds = parseJsonArray(row.current_medications);
+          userContextString = `Patient: ${row.name || session?.name || "Patient"}.
 Age: ${row.age || "Unknown"}.
-Known Chronic Conditions: ${row.conditions || "None"}.
-Recorded Allergies: ${row.allergies || "None"}.
-Current Medications: ${row.current_medications || "None"}.`;
+Gender: ${row.gender || "Unknown"}.
+Known Chronic Conditions: ${conditions.join(", ") || "None"}.
+Recorded Allergies: ${allergies.join(", ") || "None"}.
+Current Medications: ${currentMeds.join(", ") || "None"}.`;
         }
+      } catch (err) {
+        console.error("Failed to fetch user profile for meds:", err);
+      }
+
+      if (!loadedFromDb && clientProfile) {
+        const conditions = parseJsonArray(clientProfile.conditions);
+        const allergies = parseJsonArray(clientProfile.allergies);
+        const currentMeds = parseJsonArray(clientProfile.current_medications);
+        userContextString = `Patient: ${session?.name || "Patient"}.
+Age: ${clientProfile.age || "Unknown"}.
+Gender: ${clientProfile.gender || "Unknown"}.
+Known Chronic Conditions: ${conditions.join(", ") || "None"}.
+Recorded Allergies: ${allergies.join(", ") || "None"}.
+Current Medications: ${currentMeds.join(", ") || "None"}.`;
       }
     }
 
@@ -76,13 +129,17 @@ Analyze these medications, create a daily morning/afternoon/evening/night dosage
       );
     }
 
-    // Save medication check to SQLite if persistent user
+    // Save medication check to database if persistent authenticated user
     if (activeUserId) {
       try {
-        db.prepare(`
-          INSERT INTO medication_checks (user_id, medications_input, schedule_result)
-          VALUES (?, ?, ?)
-        `).run(activeUserId, medications.trim(), rawResponse);
+        const db = await getDb();
+        await db.execute({
+          sql: `
+            INSERT INTO medication_checks (user_id, medications_input, schedule_result)
+            VALUES (?, ?, ?)
+          `,
+          args: [activeUserId, medications.trim(), rawResponse],
+        });
       } catch (err) {
         console.error("Failed to save medication_check history:", err);
       }
@@ -94,7 +151,8 @@ Analyze these medications, create a daily morning/afternoon/evening/night dosage
     });
   } catch (error: unknown) {
     console.error("Meds API error:", error);
-    const errorMessage = error instanceof Error ? error.message : "Failed to process medications";
+    const errorMessage =
+      error instanceof Error ? error.message : "Failed to process medications";
     return NextResponse.json(
       { error: errorMessage },
       { status: 500 }
